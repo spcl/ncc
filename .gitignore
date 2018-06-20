@@ -1,0 +1,12 @@
+.idea/
+__pycache__
+data/*/
+*.np
+*.html
+published_results/devmap
+published_results/threadcoarsening
+published_results/vocabulary
+task/classifyapp/*/
+task/devmap/*/
+task/threadcoarsening/*/
+
