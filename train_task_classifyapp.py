@@ -435,17 +435,24 @@ def main(argv):
     folder_results = FLAGS.out
     assert len(folder_results) > 0, "Please specify a path to the results folder using --folder_results"
     folder_data = FLAGS.input_data
-    assert os.path.exists(folder_data + '_train'), "Folder not found: " + folder_data + '_train'
-    task_utils.llvm_ir_to_trainable(folder_data + '_train')
-    assert os.path.exists(folder_data + '_val'), "Folder not found: " + folder_data + '_val'
-    task_utils.llvm_ir_to_trainable(folder_data + '_val')
-    assert os.path.exists(folder_data + '_test'), "Folder not found: " + folder_data + '_test'
-    task_utils.llvm_ir_to_trainable(folder_data + '_test')
     dense_layer_size = FLAGS.dense_layer
     print_summary = FLAGS.print_summary
     num_epochs = FLAGS.num_epochs
     batch_size = FLAGS.batch_size
     train_samples = FLAGS.train_samples
+
+    # Acquire data
+    if not os.path.exists(folder_data + '_train'):
+
+        # Download data
+        task_utils.download_and_unzip('https://polybox.ethz.ch/index.php/s/JOBjrfmAjOeWCyl/download',
+                                      'classifyapp_training_data', folder_data)
+
+    task_utils.llvm_ir_to_trainable(folder_data + '_train')
+    assert os.path.exists(folder_data + '_val'), "Folder not found: " + folder_data + '_val'
+    task_utils.llvm_ir_to_trainable(folder_data + '_val')
+    assert os.path.exists(folder_data + '_test'), "Folder not found: " + folder_data + '_test'
+    task_utils.llvm_ir_to_trainable(folder_data + '_test')
 
     # Create directories if they do not exist
     if not os.path.exists(folder_results):

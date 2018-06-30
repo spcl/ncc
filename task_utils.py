@@ -26,6 +26,8 @@ import struct
 import pickle
 import os
 import re
+import wget
+import zipfile
 import rgx_utils as rgx
 from inst2vec import inst2vec_preprocess as i2v_prep
 from collections import defaultdict
@@ -38,6 +40,25 @@ flags.DEFINE_string('vocabulary_dir', 'published_results/vocabulary',
                     'Path to the vocabulary folder associated with those embeddings')
 
 FLAGS = flags.FLAGS
+
+
+########################################################################################################################
+# Downloading data sets
+########################################################################################################################
+def download_and_unzip(url, dataset_name, data_folder):
+    """
+    Download and unzip data set folder from url
+    :param url: from which to download
+    :param dataset_name: name of data set (for printing)
+    :param data_folder: folder in which to put the downloaded data
+    """
+    print('Downloading', dataset_name, 'data set...')
+    data_zip = wget.download(url, out=data_folder)
+    print('\tunzipping...')
+    zip_ = zipfile.ZipFile(data_zip, 'r')
+    zip_.extractall(data_folder)
+    zip_.close()
+    print('\tdone')
 
 
 ########################################################################################################################

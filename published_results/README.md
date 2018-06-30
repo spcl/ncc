@@ -1,8 +1,8 @@
 # Results
 
-## Pre-trained [embeddings](published_results/emb.p)
+## Pre-trained [embeddings](emb.p)
 
-**Data set and [vocabulary](published_results/vocabulary)**
+**Data set and [vocabulary](https://polybox.ethz.ch/index.php/s/AWKd60qR63yViH8)**
 
 Dataset | Files | LLVM IR lines | Vocabulary size | XFG stmt pairs
 ------------ | ------------- | ------------- | ------------- | -------------
@@ -48,13 +48,7 @@ x | x
 
 ## Pre-trained task models
 
-**Algorithm classification [here](published_results/classifyapp.zip)**
-
-Metric | [Surface Features](https://arxiv.org/pdf/1409.5718.pdf) | [RNN](https://arxiv.org/pdf/1409.5718.pdf) | [TBCNN](https://arxiv.org/pdf/1409.5718.pdf) | ncc / inst2vec
------------- | ------------- | ------------- | ------------- | ------------- 
-Test Accuracy [%] | 88.2 | 84.8 | 94.0 | 94.83
-
-**Optimal device mapping prediction [here](published_results/devmap.zip)**
+**Algorithm classification [here](classifyapp/CLASSIFYAPP-94.83.h5)**
 
 **Prediction Accuracy [%]**
 
@@ -71,7 +65,7 @@ AMD Tahiti 7970 | 2.91 | 3.34 | 3.42
 NVIDIA GTX 970 | 1.26 | 1.41 | 1.39
 
 
-**Optimal thread coarsening factor prediction [here](published_results/threadcoarsening.zip)**
+**Optimal thread coarsening factor prediction [here](https://polybox.ethz.ch/index.php/s/F8FVQV1vig2KgPB)**
 
 **Speedups**
 

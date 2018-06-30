@@ -22,12 +22,55 @@
 # ==============================================================================
 """Generate dataset for inst2vec training"""
 
+import wget
+import zipfile
+import os
+import shutil
+
 
 ########################################################################################################################
 # Main function for data set generation
 ########################################################################################################################
 def datagen(data_folder):
     """
-    :param data_folder:
-    :return:
+    Download and unzip training data for inst2vec
+    :param data_folder: folder in which to put the downloaded data
     """
+
+    ####################################################################################################################
+    # Download and unzip inst2vec training data
+    download_and_unzip('https://polybox.ethz.ch/index.php/s/SaKQ9L7dGs9zJXK/download', 'AMD', data_folder)
+    download_and_unzip('https://polybox.ethz.ch/index.php/s/5ASMNv6dYsPKjyQ/download', 'BLAS', data_folder)
+    download_and_unzip('https://polybox.ethz.ch/index.php/s/52wWiK5fjRGHLJR/download', 'eigen_synthetic', data_folder)
+    download_and_unzip('https://polybox.ethz.ch/index.php/s/Bm6cwAY3eVkR6v3/download', 'gemm_synthetic', data_folder)
+    download_and_unzip('https://polybox.ethz.ch/index.php/s/uxAAONROj1Id65y/download', 'linux-4.15', data_folder)
+    download_and_unzip('https://polybox.ethz.ch/index.php/s/KnWjolzAL2xxKWN/download', 'opencv', data_folder)
+    download_and_unzip('https://polybox.ethz.ch/index.php/s/nomO17gdAfHjqFQ/download', 'polybenchGPU', data_folder)
+    download_and_unzip('https://polybox.ethz.ch/index.php/s/J93jGpevs0lHsHM/download', 'rodinia_3.1', data_folder)
+    download_and_unzip('https://polybox.ethz.ch/index.php/s/7KGEq1Q45Xg0IeL/download', 'shoc', data_folder)
+    download_and_unzip('https://polybox.ethz.ch/index.php/s/OOmylxGcBxQM1D3/download', 'stencil_synthetic', data_folder)
+    download_and_unzip('https://polybox.ethz.ch/index.php/s/ojd0RPFOtUTPPRr/download', 'tensorflow', data_folder)
+
+    ####################################################################################################################
+    # Remove __MACOSX directory resulting from unzipping
+    if os.path.exists(os.path.join(data_folder, '__MACOSX')):
+        shutil.rmtree(os.path.join(data_folder, '__MACOSX'))
+
+
+########################################################################################################################
+# Helper function
+########################################################################################################################
+def download_and_unzip(url, dataset_name, data_folder):
+    """
+    Download and unzip data set folder from url
+    :param url: from which to download
+    :param dataset_name: name of data set (for printing)
+    :param data_folder: folder in which to put the downloaded data
+    """
+    print('Downloading', dataset_name, 'data set...')
+    data_zip = wget.download(url, out=data_folder)
+    print('\tunzipping...')
+    zip_ = zipfile.ZipFile(data_zip, 'r')
+    zip_.extractall(data_folder)
+    zip_.close()
+    print('\tdone')

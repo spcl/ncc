@@ -36,6 +36,7 @@ For training ```inst2vec``` embeddings:
   * bokeh (0.12.16)
   * umap (0.1.1)
   * sklearn (0.0)
+  * wget (3.2)
 
 Additionally, for training ```ncc``` models:
 * GNU / Linux or Mac OS

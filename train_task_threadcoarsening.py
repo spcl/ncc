@@ -363,8 +363,6 @@ def main(argv):
     # Get flag values
     embeddings = task_utils.get_embeddings()
     input_data = FLAGS.input_data
-    assert os.path.exists(input_data), "Folder not found: " + input_data
-    task_utils.llvm_ir_to_trainable(os.path.join(input_data, 'kernels_ir'))
     out = FLAGS.out
     if not os.path.exists(out):
         os.makedirs(out)
@@ -375,6 +373,13 @@ def main(argv):
     print_summary = FLAGS.print_summary
     num_epochs = FLAGS.num_epochs
     batch_size = FLAGS.batch_size
+    if not os.path.exists(input_data):
+
+        # Download data
+        task_utils.download_and_unzip('https://polybox.ethz.ch/index.php/s/Dl8v8dKbuoWS3Ck',
+                                      'threadcoarsening_training_data', input_data)
+
+    task_utils.llvm_ir_to_trainable(os.path.join(input_data, 'kernels_ir'))
 
     ####################################################################################################################
     # Reference values
