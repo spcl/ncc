@@ -955,28 +955,35 @@ def construct_function_dictionary(file):
                     arg_list_ = re.sub(r'<[^<>]+>', '', arg_list_)
                     arg_list_ = re.sub(r'<[^<>]+>', '', arg_list_)
                     args_ = arg_list_.split(', ')
-                    assert len(args_) == num_args, "Could not compute the right number of arguments in " + line + \
-                                                   "\n(a) " + str(len(args_)) + "\n(b) "+ str(num_args) + \
-                                                   "\nwith arg-list: " + arg_list_
-                    if named_args:
-                        for a in range(num_args):
-                            arg_ = re.match(r'.*( ' + rgx.local_id + r'|\.\.\.)$', args_[a])
-                            if arg_ is None:
-                                # Sometimes (eg. rodinia/openmp_particle_filter.ll),
-                                # some functions have unnamed args even though most are named
-                                # Check whether that is the case
-                                if re.match(rgx.any_type_or_struct +
-                                            r'( nocapture| readonly| readnone| dereferenceable)*', args_[a]):
-                                    arg_list.append('%' + str(a))
-                                else:
-                                    arg_ = re.match(r'(\.\.\.)$', args_[a])
-                                    assert arg_ is not None, "Could not identify argument name in \n" + line + \
+
+                    try: 
+                        if(len(args_) != num_args):
+                            print("Could not compute the right number of arguments in " + line + \
+                                  "\n(a) " + str(len(args_)) + "\n(b) "+ str(num_args) + \
+                                  "\nwith arg-list: " + arg_list_)
+                            raise ValueError('FunctionNotSupported')
+                        if named_args:
+                            for a in range(num_args):
+                                arg_ = re.match(r'.*( ' + rgx.local_id + r'|\.\.\.)$', args_[a])
+                                if arg_ is None:
+                                    # Sometimes (eg. rodinia/openmp_particle_filter.ll),
+                                    # some functions have unnamed args even though most are named
+                                    # Check whether that is the case
+                                    if re.match(rgx.any_type_or_struct +
+                                                r'( nocapture| readonly| readnone| dereferenceable)*', args_[a]):
+                                        arg_list.append('%' + str(a))
+                                    else:
+                                        arg_ = re.match(r'(\.\.\.)$', args_[a])
+                                        assert arg_ is not None, "Could not identify argument name in \n" + line + \
                                                              "\nargument is\n" + args_[a]
-                            else:
-                                if arg_.group(1) == r'...':
-                                    arg_list.append('three_dots')
                                 else:
-                                    arg_list.append(arg_.group(1)[1:]) # drop initial space
+                                    if arg_.group(1) == r'...':
+                                        arg_list.append('three_dots')
+                                    else:
+                                        arg_list.append(arg_.group(1)[1:]) # drop initial space
+                    except ValueError: 
+                        raise
+                         
 
             # Construct dictionary entry for this function
             called = False
@@ -1709,26 +1716,30 @@ def add_stmts_to_graph(G, file, functions_defined_in_file, functions_declared_in
                     # Get all individual arguments (can contain immediates!)
                     # (these are the called arguments, not the defined ones!)
                     args = list()
-                    for t in to_match:
+                    try:
+                        for t in to_match:
 
-                        if re.search(rgx.local_id + r'(?!\* )(?=([\s,\)]|$))', t) is not None:
-                            args.append(re.search(rgx.local_id + r'(?!\)\* )(?=([\s,]|$))', t).group(0))
-                        elif re.search(rgx.global_id, t) is not None:
-                            args.append(re.search(rgx.global_id, t).group(0))
-                        elif re.search(rgx.immediate_value_or_undef + r'$', t) is not None:
-                            args.append(re.search(rgx.immediate_value_or_undef, t).group(0))
-                        elif re.search(rgx.immediate_or_local_id_or_undef + r'(?!\* )(?=\()', t) is not None:
-                            # eg call void @llvm.dbg.value(metadata i32 %call())
-                            # eg call void @llvm.dbg.value(metadata i32 0())
-                            args.append(re.search(rgx.immediate_or_local_id_or_undef + r'(?!\)\* )(?=\()', t).group(0))
-                        elif re.search(r'\s+$', t) is not None or 'metadata' in t:
-                            args.append(str(1000))
-                        else:
-                            assert False, "Could not properly identify argument in: \n" + \
-                                          line + "\n" \
-                                          "argument: " + str(t) + ",\n" + \
-                                          "argument list: " + str(arg_list) + "\n" + \
-                                          "argument list (modif): " + str(arg_list_modif)
+                            if re.search(rgx.local_id + r'(?!\* )(?=([\s,\)]|$))', t) is not None:
+                                args.append(re.search(rgx.local_id + r'(?!\)\* )(?=([\s,]|$))', t).group(0))
+                            elif re.search(rgx.global_id, t) is not None:
+                                args.append(re.search(rgx.global_id, t).group(0))
+                            elif re.search(rgx.immediate_value_or_undef + r'$', t) is not None:
+                                args.append(re.search(rgx.immediate_value_or_undef, t).group(0))
+                            elif re.search(rgx.immediate_or_local_id_or_undef + r'(?!\* )(?=\()', t) is not None:
+                                # eg call void @llvm.dbg.value(metadata i32 %call())
+                                # eg call void @llvm.dbg.value(metadata i32 0())
+                                args.append(re.search(rgx.immediate_or_local_id_or_undef + r'(?!\)\* )(?=\()', t).group(0))
+                            elif re.search(r'\s+$', t) is not None or 'metadata' in t:
+                                args.append(str(1000))
+                            else:
+                                print("Could not properly identify argument in: \n" + \
+                                      line + "\n" \
+                                      "argument: " + str(t) + ",\n" + \
+                                      "argument list: " + str(arg_list) + "\n" + \
+                                      "argument list (modif): " + str(arg_list_modif))
+                                raise ValueError('FunctionNotSupported') 
+                    except ValueError: 
+                        raise
 
                 if func_name[1:] in functions_defined_in_file.keys():
                     # if this function is defined in this file
@@ -2021,26 +2032,31 @@ def check_vocabulary_size(preprocessed_file, G):
     vocabulary_size_after_graph_construction = len(vocabulary_after_graph_construction)
 
     # Perform checks
-    if vocabulary_size_after_graph_construction != vocabulary_size_after_preprocessing:
-        source_data_after_preprocessing_file = "vocabulary_text.txt"
-        source_data_after_graph_construction_file = "vocabulary_graph.txt"
-        source_data_after_graph_construction = list(vocabulary_after_graph_construction)
-        print_data(vocabulary_after_preprocessing, source_data_after_preprocessing_file)
-        print_data(source_data_after_graph_construction, source_data_after_graph_construction_file)
-        print('There are ', vocabulary_size_after_preprocessing - vocabulary_size_after_graph_construction,
-              ' words more in the text representation than in the graph representation')
-        in_graph_not_text = set(vocabulary_after_graph_construction) - set(vocabulary_after_preprocessing)
-        if in_graph_not_text:
-            print("The following words are in the graph representation but not in the text representation: ")
-            for s in in_graph_not_text:
-                print('\t', s)
-            assert False, "The words above are in the graph representation but not in the text representation: "
-        in_text_not_graph = list(set(vocabulary_after_preprocessing) - set(vocabulary_after_graph_construction))
-        if in_text_not_graph:
-            print("The following words are in the text representation but not in the graph representation: ")
-            for s in in_text_not_graph:
-                print('\t', s)
-            assert False, "The words above are in the text representation but not in the graph representation: "
+    try: 
+        if vocabulary_size_after_graph_construction != vocabulary_size_after_preprocessing:
+            source_data_after_preprocessing_file = "vocabulary_text.txt"
+            source_data_after_graph_construction_file = "vocabulary_graph.txt"
+            source_data_after_graph_construction = list(vocabulary_after_graph_construction)
+            print_data(vocabulary_after_preprocessing, source_data_after_preprocessing_file)
+            print_data(source_data_after_graph_construction, source_data_after_graph_construction_file)
+            print('There are ', vocabulary_size_after_preprocessing - vocabulary_size_after_graph_construction,
+                  ' words more in the text representation than in the graph representation')
+            in_graph_not_text = set(vocabulary_after_graph_construction) - set(vocabulary_after_preprocessing)
+            if in_graph_not_text:
+                print("The following words are in the graph representation but not in the text representation: ")
+                for s in in_graph_not_text:
+                    print('\t', s)
+                print("The words above are in the graph representation but not in the text representation: ")
+                raise ValueError('GraphMisconstructed')
+            in_text_not_graph = list(set(vocabulary_after_preprocessing) - set(vocabulary_after_graph_construction))
+            if in_text_not_graph:
+                print("The following words are in the text representation but not in the graph representation: ")
+                for s in in_text_not_graph:
+                    print('\t', s)
+                print("The words above are in the text representation but not in the graph representation: ")
+                raise ValueError('GraphMisconstructed')
+    except ValueError: 
+        return None
 
 
 def check_graph_construction(G, filename):
@@ -2108,23 +2124,26 @@ def check_graph_construction(G, filename):
 
     # Make sure the graph is not disconnected
     G_undirected = G.to_undirected()
-    if not nx.is_connected(G_undirected):
-        # Get the smallest connected component
-        print('\nNumber of connected components: ', nx.number_connected_components(G_undirected), '\n')
-        cc_ = sorted(nx.connected_components(G_undirected), key=len)
-        print('\nSecondary (non-main) connected components: \n')
-        for cc in cc_[:-1]:
-            print('\n\t--- Connected component with ', len(cc), ' nodes \n')
-            for e in G_undirected.edges(cc, data=True):
-                print('\tnode 1: ', e[0])
-                print('\tnode 2: ', e[1])
-                print(e[2]['stmt'])
-                if e[0] in list(G.nodes):
-                    G.remove_node(e[0])
-                if e[1] in list(G.nodes):
-                    G.remove_node(e[1])
-        print("WARNING! Graph for file " + filename + " is disconnected")
-        assert False, "Graph for file " + filename + " is disconnected"
+    try:
+        if not nx.is_connected(G_undirected):
+            # Get the smallest connected component
+            print('\nNumber of connected components: ', nx.number_connected_components(G_undirected), '\n')
+            cc_ = sorted(nx.connected_components(G_undirected), key=len)
+            print('\nSecondary (non-main) connected components: \n')
+            for cc in cc_[:-1]:
+                print('\n\t--- Connected component with ', len(cc), ' nodes \n')
+                for e in G_undirected.edges(cc, data=True):
+                    print('\tnode 1: ', e[0])
+                    print('\tnode 2: ', e[1])
+                    print(e[2]['stmt'])
+                    if e[0] in list(G.nodes):
+                        G.remove_node(e[0])
+                    if e[1] in list(G.nodes):
+                        G.remove_node(e[1])
+            print("WARNING! Graph for file " + filename + " is disconnected")
+            raise ValueError('GraphMisconstructed')
+    except ValueError:
+        raise
 
     # Return the list of multi-edges
     return multi_edges, G
@@ -2146,19 +2165,23 @@ def build_graph(file, functions_declared_in_file, filename):
     # Create a graph
     G = nx.MultiDiGraph()
 
-    # Dictionary of functions defined in the file
-    # keys: names of functions which are defined (not just declared) in this file
-    # values: pair: [shortened function name, its corresponding return statement]
-    functions_defined_in_file = construct_function_dictionary(file)
+    try:
+        # Dictionary of functions defined in the file
+        # keys: names of functions which are defined (not just declared) in this file
+        # values: pair: [shortened function name, its corresponding return statement]
+        functions_defined_in_file = construct_function_dictionary(file)
+    
+        # Add lines to graph
+        G = add_stmts_to_graph(G, file, functions_defined_in_file, functions_declared_in_file)
 
-    # Add lines to graph
-    G = add_stmts_to_graph(G, file, functions_defined_in_file, functions_declared_in_file)
+        # Make sure the vocabulary size in the graph representation matches the one in the text representation
+        check_vocabulary_size(file, G)
 
-    # Make sure the vocabulary size in the graph representation matches the one in the text representation
-    check_vocabulary_size(file, G)
+        # Make sure the graph was correctly constructed
+        multi_edges, G = check_graph_construction(G, filename)
 
-    # Make sure the graph was correctly constructed
-    multi_edges, G = check_graph_construction(G, filename)
+    except ValueError:
+        raise
 
     return G, multi_edges
 
@@ -2800,7 +2823,10 @@ def construct_xfg(data_folder):
                 print('\n--- Building graph for file : ', file_name, '(', i, '/', num_files, ')')
 
                 # Construct graph
-                G, multi_edges = build_graph(preprocessed_file, functions_declared_in_files[i], file_names[i])
+                try: 
+                    G, multi_edges = build_graph(preprocessed_file, functions_declared_in_files[i], file_names[i])
+                except ValueError: 
+                    continue
 
                 # Print data to external file
                 print_graph_to_file(G, multi_edges, graph_folder, file_name)
