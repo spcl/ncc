@@ -42,8 +42,9 @@ def main(argv):
     data_folder = os.path.join(FLAGS.data_folder, FLAGS.data)
     if not os.path.exists(FLAGS.embeddings_file):
 
-        if FLAGS.data == "data":
+        if FLAGS.data == "data" and len(os.listdir(data_folder)) <= 1:
             # Generate the data set
+            print('Folder', data_folder, 'is empty - preparing to download training data')
             i2v_datagen.datagen(data_folder)
         else:
             # Assert the data folder's existence
