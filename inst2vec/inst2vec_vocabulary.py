@@ -692,8 +692,6 @@ def construct_vocabulary(data_folder, folders):
                             print('wrote pairs: {:>10,d} / {:>10,d} ...'.format(counter, num_pairs))
 
                         # Write and increment counter
-                        assert int(p[0]) < 184, "Found index " + str(int(p[0]))
-                        assert int(p[1]) < 184, "Found index " + str(int(p[1]))
                         rec.write(struct.pack('II', int(p[0]), int(p[1])))
                         counter += 1
 
