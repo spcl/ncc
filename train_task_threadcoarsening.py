@@ -373,10 +373,10 @@ def main(argv):
     print_summary = FLAGS.print_summary
     num_epochs = FLAGS.num_epochs
     batch_size = FLAGS.batch_size
-    if not os.path.exists(input_data):
+    if not os.path.exists(os.path.join(input_data, 'kernels_ir')):
 
         # Download data
-        task_utils.download_and_unzip('https://polybox.ethz.ch/index.php/s/Dl8v8dKbuoWS3Ck',
+        task_utils.download_and_unzip('https://polybox.ethz.ch/index.php/s/Dl8v8dKbuoWS3Ck/download',
                                       'threadcoarsening_training_data', input_data)
 
     task_utils.llvm_ir_to_trainable(os.path.join(input_data, 'kernels_ir'))

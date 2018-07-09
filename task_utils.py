@@ -21,7 +21,6 @@
 # ==============================================================================
 """Helper variables and functions for NCC task training"""
 
-import copy
 import struct
 import pickle
 import os
@@ -106,7 +105,7 @@ def inline_struct_types_in_file(data, dic):
     return data
 
 
-def inline_struct_types_txt(data):
+def inline_struct_types_txt(data, data_with_structure_def):
     """
     Inline structure types so that the code has no more named structures but only explicit aggregate types
     And construct a dictionary of these named structures
@@ -121,15 +120,16 @@ def inline_struct_types_txt(data):
     # Loop on all files in the dataset
     for i in range(len(data)):
         # Construct a dictionary ["structure name", "corresponding literal structure"]
-        data[i], dict_temp = i2v_prep.construct_struct_types_dictionary_for_file(data[i])
+        data_with_structure_def[i], dict_temp = \
+            i2v_prep.construct_struct_types_dictionary_for_file(data_with_structure_def[i])
 
         # If the dictionary is empty
         if not dict_temp:
             found_type = False
             for l in data[i]:
                 if re.match(rgx.struct_name + ' = type (<?\{ .* \}|opaque|{})', l):
-                    found_type = True;
-                    break;
+                    found_type = True
+                    break
             assert not found_type, "Structures' dictionary is empty for file containing type definitions: \n" + \
                                    data[i][0] + '\n' + data[i][1] + '\n' + data[i] + '\n'
 
@@ -327,12 +327,12 @@ def llvm_ir_to_trainable(folder_ir):
             stmts_cut_off = set(stmts_cut_off)
 
             ############################################################################################################
-            # Ir processing (inline structures, abstract statements)
+            # IR processing (inline structures, abstract statements)
 
             # Source code transformation: inline structure types
             print('\n--- Inline structure types')
-            processed_data = copy.deepcopy(preprocessed_data_with_structure_def)
-            processed_data, structures_dictionary = inline_struct_types_txt(processed_data)
+            processed_data, structures_dictionary = inline_struct_types_txt(preprocessed_data,
+                                                                            preprocessed_data_with_structure_def)
 
             # Source code transformation: identifier processing (abstract statements)
             print('\n--- Abstract statements from identifiers')

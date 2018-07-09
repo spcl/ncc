@@ -366,7 +366,7 @@ def main(argv):
     num_epochs = FLAGS.num_epochs
     batch_size = FLAGS.batch_size
     input_data = FLAGS.input_data
-    if not os.path.exists(input_data):
+    if not os.path.exists(os.path.join(input_data, 'kernels_ir')):
 
         # Download data
         task_utils.download_and_unzip('https://polybox.ethz.ch/index.php/s/U08Z3xLhvbLk8io/download',
