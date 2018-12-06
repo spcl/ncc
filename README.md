@@ -9,15 +9,15 @@ This repository contains the code used in [[paper](http://arxiv.org/abs/1806.073
 
 Please cite as:
 ```bibtex
-@article{ncc,
-  author    = {Tal Ben-Nun and Alice Shoshana Jakobovits and Torsten Hoefler},
-  title     = {Neural Code Comprehension: A Learnable Representation of Code Semantics},
-  journal   = {CoRR},
-  volume    = {abs/1806.07336},
-  year      = {2018},
-  url       = {http://arxiv.org/abs/1806.07336},
-  archivePrefix = {arXiv},
-  eprint    = {1806.07336},
+@incollection{ncc,
+title = {Neural Code Comprehension: A Learnable Representation of Code Semantics},
+author = {Ben-Nun, Tal and Jakobovits, Alice Shoshana and Hoefler, Torsten},
+booktitle = {Advances in Neural Information Processing Systems 31},
+editor = {S. Bengio and H. Wallach and H. Larochelle and K. Grauman and N. Cesa-Bianchi and R. Garnett},
+pages = {3588--3600},
+year = {2018},
+publisher = {Curran Associates, Inc.},
+url = {http://papers.nips.cc/paper/7617-neural-code-comprehension-a-learnable-representation-of-code-semantics.pdf}
 }
 ```
 
