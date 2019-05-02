@@ -9,4 +9,10 @@ published_results/vocabulary
 task/classifyapp/*/
 task/devmap/*/
 task/threadcoarsening/*/
-
+venv/
+task/devmap/*
+task/threadcoarsening/*
+task/devmap_test
+task/devmap_test_overnight
+task/classifyapp/*
+data/
