@@ -7,6 +7,6 @@ data/*/
 published_results/devmap
 published_results/threadcoarsening
 published_results/vocabulary
-task/classifyapp/*
+task/classifyapp/*/
 task/devmap/*
 task/threadcoarsening/*
