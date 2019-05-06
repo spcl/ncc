@@ -186,8 +186,10 @@ class NCC_devmap:
         self.model = load_model(inpath)
 
     def train(self, epochs: int, batch_size: int, **train) -> None:
+        from keras.callbacks import TensorBoard
         self.model.fit([train["aux_in"], train["sequences"]], [train["y_1hot"], train["y_1hot"]],
-                       epochs=epochs, batch_size=batch_size, verbose=train["verbose"], shuffle=True)
+                       epochs=epochs, batch_size=batch_size, verbose=train["verbose"], shuffle=True,
+                       callbacks=[TensorBoard(train['log_dir'])])
 
     def predict(self, batch_size, **test):
         p = np.array(self.model.predict(
@@ -255,6 +257,7 @@ def evaluate(model, device, data_folder, out_folder, embeddings,
                 model_basename=model_basename, platform=platform, j=j))
             predictions_path = os.path.join(out_folder, "predictions/{model_basename}-{platform}-{j}.result".format(
                 model_basename=model_basename, platform=platform, j=j))
+            log_dir = os.path.join(out_folder, "logs")
 
             if fs.exists(predictions_path):
                 # load result from cache
@@ -284,7 +287,8 @@ def evaluate(model, device, data_folder, out_folder, embeddings,
                                 y_1hot=y_1hot[train_index],
                                 verbose=False,
                                 epochs=num_epochs,
-                                batch_size=batch_size)
+                                batch_size=batch_size,
+                                log_dir=log_dir)
                     fs.mkdir(fs.dirname(model_path))
                     model.save(model_path)
                     print('\tsaved model to', model_path)
