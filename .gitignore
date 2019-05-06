@@ -1,12 +1,12 @@
 .idea/
 __pycache__
-data/*/
+venv/
+data/*
 *.np
 *.html
 published_results/devmap
 published_results/threadcoarsening
 published_results/vocabulary
-task/classifyapp/*/
-task/devmap/*/
-task/threadcoarsening/*/
-
+task/classifyapp/*
+task/devmap/*
+task/threadcoarsening/*

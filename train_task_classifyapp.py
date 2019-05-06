@@ -37,7 +37,7 @@ from absl import app
 from absl import flags
 
 # Parameters of classifyapp
-flags.DEFINE_string('input_data', 'task/classifyapp/ir', 'Path to input data')
+flags.DEFINE_string('input_data', 'task/classifyapp', 'Path to input data')
 flags.DEFINE_string('out', 'task/classifyapp', 'Path to folder in which to write saved Keras models and predictions')
 flags.DEFINE_integer('num_epochs', 50, 'number of training epochs')
 flags.DEFINE_integer('batch_size', 64, 'training batch size')
@@ -122,7 +122,10 @@ class EmbeddingSequence(utils.Sequence):
         self.x_seq = x_seq
         self.y_1hot = y_1hot
         self.emb = embedding_mat
-        self.sess = tf.Session()
+        # Make tf block less gpu memory
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        self.sess = tf.Session(config=config)
         self._set_index_array()
 
     def _set_index_array(self):
@@ -152,7 +155,10 @@ class EmbeddingPredictionSequence(utils.Sequence):
         self.x_seq = x_seq
         self.dataset_len = int(np.shape(x_seq)[0] // self.batch_size)
         self.emb = embedding_mat
-        self.sess = tf.Session()
+        # Make tf block less gpu memory
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        self.sess = tf.Session(config=config)
 
     def __len__(self):
         return self.dataset_len
@@ -233,7 +239,7 @@ class NCC_classifyapp(object):
                                      shuffle=True, callbacks=[checkpoint])
         except KeyboardInterrupt:
             print('Ctrl-C detected, saving weights to file')
-            self.model.save_weights('weights-kill.h5')
+            self.model.save_weights(os.path.join(FLAGS.out, 'weights-kill.h5'))
 
     def predict(self, sequences: np.array, batch_size: int) -> np.array:
         # directly predict application class from source sequences:
@@ -264,13 +270,13 @@ def evaluate(model, embeddings, folder_data, samples_per_class, folder_results, 
     num_classes = 104
     y_train = np.empty(0)  # training
     X_train = list()
-    folder_data_train = folder_data + '_train'
+    folder_data_train = os.path.join(folder_data, 'seq_train')
     y_val = np.empty(0)  # validation
     X_val = list()
-    folder_data_val = folder_data + '_val'
+    folder_data_val = os.path.join(folder_data, 'seq_val')
     y_test = np.empty(0)  # testing
     X_test = list()
-    folder_data_test = folder_data + '_test'
+    folder_data_test = os.path.join(folder_data, 'seq_test')
     print('Getting file names for', num_classes, 'classes from folders:')
     print(folder_data_train)
     print(folder_data_val)
@@ -349,9 +355,9 @@ def evaluate(model, embeddings, folder_data, samples_per_class, folder_results, 
     # Set up names paths
     model_name = model.__name__
     model_path = os.path.join(folder_results,
-                              "classifyapp/models/{}.model".format(model_name))
+                              "models/{}.model".format(model_name))
     predictions_path = os.path.join(folder_results,
-                                    "classifyapp/predictions/{}.result".format(model_name))
+                                    "predictions/{}.result".format(model_name))
 
     # If predictions have already been made with these embeddings, load them
     if fs.exists(predictions_path):
@@ -442,17 +448,17 @@ def main(argv):
     train_samples = FLAGS.train_samples
 
     # Acquire data
-    if not os.path.exists(folder_data + '_train'):
-
+    if not os.path.exists(os.path.join(folder_data, 'ir_train')):
         # Download data
         task_utils.download_and_unzip('https://polybox.ethz.ch/index.php/s/JOBjrfmAjOeWCyl/download',
                                       'classifyapp_training_data', folder_data)
 
-    task_utils.llvm_ir_to_trainable(folder_data + '_train')
-    assert os.path.exists(folder_data + '_val'), "Folder not found: " + folder_data + '_val'
-    task_utils.llvm_ir_to_trainable(folder_data + '_val')
-    assert os.path.exists(folder_data + '_test'), "Folder not found: " + folder_data + '_test'
-    task_utils.llvm_ir_to_trainable(folder_data + '_test')
+    task_utils.llvm_ir_to_trainable(os.path.join(folder_data, 'ir_train'))
+    assert os.path.exists(os.path.join(folder_data, 'ir_val')), "Folder not found: " + folder_data + '/ir_val'
+    task_utils.llvm_ir_to_trainable(os.path.join(folder_data, 'ir_val'))
+    assert os.path.exists(os.path.join(folder_data, 'ir_test')), "Folder not found: " + folder_data + '/ir_test'
+    task_utils.llvm_ir_to_trainable(os.path.join(folder_data, 'ir_test'))
+
 
     # Create directories if they do not exist
     if not os.path.exists(folder_results):
