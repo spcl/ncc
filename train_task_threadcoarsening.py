@@ -252,7 +252,12 @@ def evaluate(model, device, data_folder, out_folder, embeddings, dense_layer_siz
 
         # Tensor of shape (num_input_files, sequence length, embbedding dimension)
         embedding_input_ = tf.nn.embedding_lookup(embedding_matrix_normalized, seq_)
-        with tf.Session() as sess:
+
+        # Make tf block less gpu memory
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+
+        with tf.Session(config=config) as sess:
             embedding_input = sess.run(embedding_input_, feed_dict={seq_: X_seq})
 
         # Leave-one-out cross-validation
@@ -424,4 +429,3 @@ def main(argv):
 
 if __name__ == '__main__':
     app.run(main)
-

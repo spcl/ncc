@@ -186,8 +186,10 @@ class NCC_devmap:
         self.model = load_model(inpath)
 
     def train(self, epochs: int, batch_size: int, **train) -> None:
+        from keras.callbacks import TensorBoard
         self.model.fit([train["aux_in"], train["sequences"]], [train["y_1hot"], train["y_1hot"]],
-                       epochs=epochs, batch_size=batch_size, verbose=train["verbose"], shuffle=True)
+                       epochs=epochs, batch_size=batch_size, verbose=train["verbose"], shuffle=True,
+                       callbacks=[TensorBoard(train['log_dir'])])
 
     def predict(self, batch_size, **test):
         p = np.array(self.model.predict(
@@ -233,7 +235,12 @@ def evaluate(model, device, data_folder, out_folder, embeddings,
         # Tensor of shape (num_input_files, sequence length, embbedding dimension)
         embedding_input_ = tf.nn.embedding_lookup(embedding_matrix_normalized,
                                                   seq_)
-        with tf.Session() as sess:
+
+        # Make tf block less gpu memory
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+
+        with tf.Session(config=config) as sess:
             embedding_input = sess.run(embedding_input_, feed_dict={seq_: sequences})
 
         # Values used for training & predictions
@@ -255,6 +262,7 @@ def evaluate(model, device, data_folder, out_folder, embeddings,
                 model_basename=model_basename, platform=platform, j=j))
             predictions_path = os.path.join(out_folder, "predictions/{model_basename}-{platform}-{j}.result".format(
                 model_basename=model_basename, platform=platform, j=j))
+            log_dir = os.path.join(out_folder, "logs")
 
             if fs.exists(predictions_path):
                 # load result from cache
@@ -284,7 +292,8 @@ def evaluate(model, device, data_folder, out_folder, embeddings,
                                 y_1hot=y_1hot[train_index],
                                 verbose=False,
                                 epochs=num_epochs,
-                                batch_size=batch_size)
+                                batch_size=batch_size,
+                                log_dir=log_dir)
                     fs.mkdir(fs.dirname(model_path))
                     model.save(model_path)
                     print('\tsaved model to', model_path)

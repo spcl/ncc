@@ -52,9 +52,12 @@ def download_and_unzip(url, dataset_name, data_folder):
     :param data_folder: folder in which to put the downloaded data
     """
     print('Downloading', dataset_name, 'data set...')
+    if not os.path.exists(data_folder):
+        os.makedirs(data_folder)
     data_zip = wget.download(url, out=data_folder)
     print('\tunzipping...')
     zip_ = zipfile.ZipFile(data_zip, 'r')
+    assert os.path.isdir(data_folder), data_folder
     zip_.extractall(data_folder)
     zip_.close()
     print('\tdone')
