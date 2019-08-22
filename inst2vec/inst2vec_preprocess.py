@@ -30,6 +30,13 @@ import pickle
 import os
 import copy
 
+import traceback
+from multiprocessing import Pool
+from functools import partial
+
+# disable multiprocessing and possibly print more verbose output
+DEBUG = False
+PROCESSES = 12
 
 ########################################################################################################################
 # Helper functions: list and stmt handling
@@ -320,7 +327,8 @@ def print_graph_to_file(G, multi_edge_dic, folder, filename):
     """
     # Print to file
     graph_filename = os.path.join(folder, filename[:-3] + '.txt')
-    print('Printing graph to  file : ', graph_filename)
+    if DEBUG:
+        print('Printing graph to  file : ', graph_filename)
 
     with open(graph_filename, 'w') as f:
 
@@ -426,7 +434,8 @@ def print_structure_dictionary(dic, folder, filename):
     """
     # Print dictionary in alphabetical order
     dic_filename = os.path.join(folder, filename[:-3] + '.txt')
-    print('Printing dictionary to file "', dic_filename)
+    if DEBUG:
+        print('Printing dictionary to file "', dic_filename)
     with open(dic_filename, 'w') as f:
         f.write('{:<70}   {}\n\n'.format('structure name', 'literal value'))
         for key, value in sorted(dic.items()):
@@ -442,7 +451,8 @@ def print_dxfg_to_file(D, folder, filename):
     """
     # Print to file
     graph_filename = os.path.join(folder, filename[:-3] + '.txt')
-    print('Printing graph to  file : ', graph_filename)
+    if DEBUG:
+        print('Printing dual graph to  file : ', graph_filename)
 
     with open(graph_filename, 'w') as f:
 
@@ -1025,7 +1035,7 @@ def construct_function_dictionary(file):
     # Make sure all function names have a corresponding return identifier
     for k, v in functions_defined_in_file_DEF.items():
         if k != 'main':
-            if v[1] is 'no_return':
+            if v[2] is 'no_return':
                 print('WARNING! Function', k, 'has no corresponding return statement')
 
     return functions_defined_in_file_DEF
@@ -1698,17 +1708,29 @@ def add_stmts_to_graph(G, file, functions_defined_in_file, functions_declared_in
                         # For next loop
                         s = re.search(r'(\([^\(\)]+\))', arg_list_modif)
 
-                    # Get "to match"
+                    # We are splitting arg_list_modif into arguments at every 'valid' comma.
+                    # and store the result in list `to_match`
+                    # to this end, replace all non 'valid' commata.
+                    open_qts = False
+                    open_par = 0
+                    for i, c in enumerate(arg_list_modif):
+                        if open_qts:
+                            if c == '"':
+                                open_qts = False
+                            elif c == ',':  # remove comma inside "..."
+                                arg_list_modif = arg_list_modif[:i] + ' ' + arg_list_modif[i+1:]
+                        else:  # don't match parens if inside a quote, but we are not
+                            if c == '"':
+                                open_qts = True
+                            elif c == '(':
+                                open_par += 1
+                            elif c == ')':
+                                open_par -= 1
+                            elif c == ',' and open_par:  # remove comma inside (...)
+                                arg_list_modif = arg_list_modif[:i] + ' ' + arg_list_modif[i+1:]
+                        assert open_par >= 0 and open_qts >= 0, "\nFAIL: Really bad argument string:\n" + arg_list_modif + "\n\n"
+
                     to_match = arg_list_modif.split(',')
-                    while len(to_match) != num_args:
-                        to_modif = re.search('\((.*),(.*)\)', arg_list)
-                        if to_modif is None:
-                            to_modif = re.search('\"(.*),(.*)\"', arg_list)
-                        assert to_modif is not None, "Unexpected number of arguments in " + line
-                        for i in range(1, int(len(to_modif.groups())), 2):
-                            arg_list = arg_list.replace(to_modif.group(i) + ',' + to_modif.group(i+1),
-                                                        to_modif.group(i) + ' ' + to_modif.group(i+1))
-                        to_match = arg_list.split(',')
                     assert len(to_match) == num_args, "Wrong number of arguments in line " + line + \
                                                       " (args: " + arg_list + ", expected " + str(num_args) + \
                                                       " arguments."
@@ -2435,7 +2457,8 @@ def inline_struct_types(G, data_with_struct_def, file_name, specific_struct_name
     :return: modified graph
     """
     # Print
-    print('Inlining structures for file : ', file_name)
+    if DEBUG:
+        print('Inlining structures for file : ', file_name)
 
     # Construct a dictionary ["structure name", "corresponding literal structure"]
     data_with_struct_def, dict_temp = construct_struct_types_dictionary_for_file(data_with_struct_def)
@@ -2693,8 +2716,197 @@ def check_sanity(D, G):
 
 
 ########################################################################################################################
-# Main function for XFG-construction
+# Main function(s) for XFG-construction
 ########################################################################################################################
+
+def construct_xfg_single_raw_folder(params, num_folder):
+    """this gets called by the processes started in construct_xfg(), and has been lifted from there to enable multiprocessing."""
+    folder_counter, folder_raw = params
+    # Print
+    print('\n------ Processing raw folder', folder_raw, '(', folder_counter + 1, '/', num_folder, ')')
+
+    ################################################################################################################
+    # Check whether the folder has been preprocessed already R
+
+    folder_preprocessed = folder_raw + '_preprocessed'
+    data_preprocessing_done_filename = os.path.join(folder_preprocessed, 'preprocessing.done')
+    data_preprocessing_broken_filename = os.path.join(folder_preprocessed, 'preprocessing.broken.txt')
+    if os.path.exists(data_preprocessing_done_filename):
+        print("\tfolder already preprocessed (found file", data_preprocessing_done_filename, ")")
+    if os.path.exists(data_preprocessing_broken_filename):
+        print("\tfolder maybe already preprocessed, BUT BROKEN! (see file ", data_preprocessing_broken_filename, ")")
+
+    else:   # this folder has not been preprocessed yet:
+
+        ############################################################################################################
+        # Read data from files
+
+        data_read_from_folder_filename = os.path.join(folder_raw, 'data_read_pickle')
+        if not os.path.exists(data_read_from_folder_filename):
+
+            # Read data from folder and pickle it
+            print('\n--- Read data from folder ', folder_raw)
+            raw_data, file_names = read_data_files_from_folder(folder_raw)
+            print('Dumping data read from folder ', folder_raw, ' into file ', data_read_from_folder_filename)
+            i2v_utils.safe_pickle([raw_data, file_names], data_read_from_folder_filename)
+
+        else:
+
+            # Load pre-processed data
+            print('\n--- Loading data read from folder ', folder_raw, ' from file ', data_read_from_folder_filename)
+            with open(data_read_from_folder_filename, 'rb') as f:
+                raw_data, file_names = pickle.load(f)
+
+        # Print data statistics and release memory
+        source_data_list, source_data = data_statistics(raw_data, descr="reading data from source files")
+        del source_data_list
+
+        ############################################################################################################
+        # Pre-process source code
+
+        # TODO lift code from here to task_util for xfgs.
+
+        if not os.path.exists(folder_preprocessed):
+            os.makedirs(folder_preprocessed)
+        data_preprocessed_filename = os.path.join(folder_preprocessed, 'data_preprocessed_pickle')
+        if not os.path.exists(data_preprocessed_filename):
+
+            # Source code transformation: simple pre-processing
+            print('\n--- Pre-process code')
+            preprocessed_data, functions_declared_in_files = preprocess(raw_data)
+            preprocessed_data_with_structure_def = raw_data
+            # save the vocabulary for later checks
+            vocabulary_after_preprocessing = list(set(collapse_into_one_list(preprocessed_data)))
+
+            # Dump pre-processed data into a folder to be reused
+            print('Writing pre-processed data into folder ', folder_preprocessed, '/')
+            print_preprocessed_data(preprocessed_data, folder_preprocessed, file_names)
+            print('Dumping pre-processed data info file ', data_preprocessed_filename)
+            i2v_utils.safe_pickle([preprocessed_data, functions_declared_in_files,
+                                    preprocessed_data_with_structure_def, vocabulary_after_preprocessing],
+                                    data_preprocessed_filename)
+
+        else:
+
+            # Load pre-processed data
+            print('\n--- Loading pre-processed data from ', data_preprocessed_filename)
+            with open(data_preprocessed_filename, 'rb') as f:
+                preprocessed_data, functions_declared_in_files, \
+                    preprocessed_data_with_structure_def, vocabulary_after_preprocessing = pickle.load(f)
+
+        # Print statistics and release memory
+        source_data_list, source_data = data_statistics(preprocessed_data, descr="pre-processing code")
+        del source_data_list
+
+        # Make sure folders exist
+        graph_folder = os.path.join(folder_preprocessed, 'xfg')
+        if not os.path.exists(graph_folder): os.makedirs(graph_folder)
+        structures_folder = os.path.join(folder_preprocessed, 'structure_dictionaries')
+        if not os.path.exists(structures_folder): os.makedirs(structures_folder)
+        transformed_folder = os.path.join(folder_preprocessed, 'data_transformed')
+        if not os.path.exists(transformed_folder): os.makedirs(transformed_folder)
+        dual_graph_folder = os.path.join(folder_preprocessed, 'xfg_dual')
+        if not os.path.exists(dual_graph_folder): os.makedirs(dual_graph_folder)
+
+        num_files = len(file_names)
+        num_broken_files = 0
+        if isinstance(file_names, dict):
+            file_names = list(file_names.values())
+        for i, (preprocessed_file, file_name) in enumerate(zip(preprocessed_data, file_names)):
+
+            dual_graphs_filename = os.path.join(dual_graph_folder, file_name[:-3] + '.p')
+            if not os.path.exists(dual_graphs_filename):
+
+                ####################################################################################################
+                # Build XFG (context graph)
+                if DEBUG:
+                    print('\n--- Building graph for file : ', file_name, '(', i, '/', num_files, ')')
+
+                # Construct graph
+                try:
+                    G, multi_edges = build_graph(preprocessed_file, functions_declared_in_files[i], file_names[i])
+                except ValueError:
+                    continue
+                except AssertionError as e:
+                    if DEBUG:
+                        raise
+                    num_broken_files += 1                    
+                    print(e)
+                    print(traceback.format_exc())
+                    with open(data_preprocessing_broken_filename, 'a') as f:
+                        print('ASSERTION ERROR OCCURRED WHILE PROCESSING:', file=f)
+                        print('FILENAME: ', file_name, '(', i, '/', num_files, ')', file=f)
+                        print('FOLDER: ', folder_preprocessed, file=f)
+                        print(e, file=f)
+                        print(traceback.format_exc(), file=f)
+                        print('\n', file=f)
+                    continue
+
+                # Print data to external file
+                print_graph_to_file(G, multi_edges, graph_folder, file_name)
+
+                ####################################################################################################
+                # XFG transformations (inline structures and abstract statements)
+
+                # Determine whether the data set has a specific structure pattern or not
+                specific_struct_name_pattern = get_data_characteristics(folder_raw)
+                if specific_struct_name_pattern:
+                    rgx.struct_name = '%"[^"]*"'    # Adjust structure names in accordance
+
+                # Source code transformation: inline structure types
+                G, structures_dictionary = inline_struct_types(G, preprocessed_data_with_structure_def[i],
+                                                                file_name, specific_struct_name_pattern)
+
+                # Print structures dictionary
+                print_structure_dictionary(structures_dictionary, structures_folder, file_name)
+
+                # Source code transformation: abstract statement
+                G = abstract_statements_from_identifiers(G)
+
+                # Save G to file
+                i2v_utils.safe_pickle(G, os.path.join(graph_folder, file_name[:-3] + '_xfg.p'))
+
+                # Dump list of statements to be used in construct_vocabulary
+                stmt_list = [e[2]['stmt'] for e in G.edges(data=True)]
+                write_to = os.path.join(transformed_folder, file_name[:-3] + '.p')
+                if DEBUG:
+                    print('Writing transformed data to', write_to)
+                i2v_utils.safe_pickle(stmt_list, write_to)
+
+                ####################################################################################################
+                # Build dual-XFG
+
+                dual_graphs_filename = os.path.join(dual_graph_folder, file_name[:-3] + '.p')
+                if not os.path.exists(dual_graphs_filename):
+
+                    if DEBUG:
+                        print('Building dual graph for file ', file_name)
+
+                    G_diff = disambiguate_stmts(G)
+                    D = build_dual_graph(G_diff)     # dual-XFG
+                    check_sanity(D, G)               # check the sanity of the produced graph
+                    print_dxfg_to_file(D, dual_graph_folder, file_name)    # print data to external file
+
+                    # Write dual graphs to file
+                    if DEBUG:
+                        print('Writing dual graphs to file ', dual_graphs_filename)
+                    i2v_utils.safe_pickle(D, dual_graphs_filename)
+            else:
+
+                print('--- Found dual-xfg for file : ', file_name, ', skipping...')
+
+        ############################################################################################################
+        # Write file indicating that the folder has been preprocessed
+        f = open(data_preprocessing_done_filename, 'w')
+        f.close()
+        if os.path.exists(data_preprocessing_broken_filename):
+            with open(data_preprocessing_broken_filename, 'a') as f:
+                f.write(f"\nStats:\n{num_files}/{num_broken_files} were broken and skipped.")
+        with open(os.path.join(folder_raw, '..', 'broken_files_stats.txt'), 'a') as f:
+            f.write(f"In folder {folder_raw.split('/')[-1]} there were {num_broken_files}/{num_files} broken.\n")
+
+
+
 def construct_xfg(data_folder):
     """
     Preprocess raw LLVM IR code into XFGs (conteXtual Flow Graphs)
@@ -2735,158 +2947,14 @@ def construct_xfg(data_folder):
     print('In folder', data_folder, ', found', len(folders_raw), 'raw data folder(s):\n', folders_raw)
 
     # Loop over raw data folders
-    num_folders = len(folders_raw)
-    for folder_counter, folder_raw in enumerate(folders_raw):
-
-        # Print
-        print('\n------ Processing raw folder', folder_raw, '(', folder_counter + 1, '/', num_folders, ')')
-
-        ################################################################################################################
-        # Check whether the folder has been preprocessed already R
-
-        folder_preprocessed = folder_raw + '_preprocessed'
-        data_preprocessing_done_filename = os.path.join(folder_preprocessed, 'preprocessing.done')
-        if os.path.exists(data_preprocessing_done_filename):
-            print("\tfolder already preprocessed (found file", data_preprocessing_done_filename, ")")
-
-        else:   # this folder has not been preprocessed yet:
-
-            ############################################################################################################
-            # Read data from files
-
-            data_read_from_folder_filename = os.path.join(folder_raw, 'data_read_pickle')
-            if not os.path.exists(data_read_from_folder_filename):
-
-                # Read data from folder and pickle it
-                print('\n--- Read data from folder ', folder_raw)
-                raw_data, file_names = read_data_files_from_folder(folder_raw)
-                print('Dumping data read from folder ', folder_raw, ' into file ', data_read_from_folder_filename)
-                i2v_utils.safe_pickle([raw_data, file_names], data_read_from_folder_filename)
-
-            else:
-
-                # Load pre-processed data
-                print('\n--- Loading data read from folder ', folder_raw, ' from file ', data_read_from_folder_filename)
-                with open(data_read_from_folder_filename, 'rb') as f:
-                    raw_data, file_names = pickle.load(f)
-
-            # Print data statistics and release memory
-            source_data_list, source_data = data_statistics(raw_data, descr="reading data from source files")
-            del source_data_list
-
-            ############################################################################################################
-            # Pre-process source code
-
-            if not os.path.exists(folder_preprocessed):
-                os.makedirs(folder_preprocessed)
-            data_preprocessed_filename = os.path.join(folder_preprocessed, 'data_preprocessed_pickle')
-            if not os.path.exists(data_preprocessed_filename):
-
-                # Source code transformation: simple pre-processing
-                print('\n--- Pre-process code')
-                preprocessed_data, functions_declared_in_files = preprocess(raw_data)
-                preprocessed_data_with_structure_def = raw_data
-                # save the vocabulary for later checks
-                vocabulary_after_preprocessing = list(set(collapse_into_one_list(preprocessed_data)))
-
-                # Dump pre-processed data into a folder to be reused
-                print('Writing pre-processed data into folder ', folder_preprocessed, '/')
-                print_preprocessed_data(preprocessed_data, folder_preprocessed, file_names)
-                print('Dumping pre-processed data info file ', data_preprocessed_filename)
-                i2v_utils.safe_pickle([preprocessed_data, functions_declared_in_files,
-                                       preprocessed_data_with_structure_def, vocabulary_after_preprocessing],
-                                      data_preprocessed_filename)
-
-            else:
-
-                # Load pre-processed data
-                print('\n--- Loading pre-processed data from ', data_preprocessed_filename)
-                with open(data_preprocessed_filename, 'rb') as f:
-                    preprocessed_data, functions_declared_in_files, \
-                        preprocessed_data_with_structure_def, vocabulary_after_preprocessing = pickle.load(f)
-
-            # Print statistics and release memory
-            source_data_list, source_data = data_statistics(preprocessed_data, descr="pre-processing code")
-            del source_data_list
-
-            # Make sure folders exist
-            graph_folder = os.path.join(folder_preprocessed, 'xfg')
-            if not os.path.exists(graph_folder): os.makedirs(graph_folder)
-            structures_folder = os.path.join(folder_preprocessed, 'structure_dictionaries')
-            if not os.path.exists(structures_folder): os.makedirs(structures_folder)
-            transformed_folder = os.path.join(folder_preprocessed, 'data_transformed')
-            if not os.path.exists(transformed_folder): os.makedirs(transformed_folder)
-            dual_graph_folder = os.path.join(folder_preprocessed, 'xfg_dual')
-            if not os.path.exists(dual_graph_folder): os.makedirs(dual_graph_folder)
-
-            num_files = len(file_names)
-            if isinstance(file_names, dict):
-                file_names = list(file_names.values())
-            for i, (preprocessed_file, file_name) in enumerate(zip(preprocessed_data, file_names)):
-
-                dual_graphs_filename = os.path.join(dual_graph_folder, file_name[:-3] + '.p')
-                if not os.path.exists(dual_graphs_filename):
-
-                    ####################################################################################################
-                    # Build XFG (context graph)
-                    print('\n--- Building graph for file : ', file_name, '(', i, '/', num_files, ')')
-
-                    # Construct graph
-                    try:
-                        G, multi_edges = build_graph(preprocessed_file, functions_declared_in_files[i], file_names[i])
-                    except ValueError:
-                        continue
-
-                    # Print data to external file
-                    print_graph_to_file(G, multi_edges, graph_folder, file_name)
-
-                    ####################################################################################################
-                    # XFG transformations (inline structures and abstract statements)
-
-                    # Determine whether the data set has a specific structure pattern or not
-                    specific_struct_name_pattern = get_data_characteristics(folder_raw)
-                    if specific_struct_name_pattern:
-                        rgx.struct_name = '%"[^"]*"'    # Adjust structure names in accordance
-
-                    # Source code transformation: inline structure types
-                    G, structures_dictionary = inline_struct_types(G, preprocessed_data_with_structure_def[i],
-                                                                   file_name, specific_struct_name_pattern)
-
-                    # Print structures dictionary
-                    print_structure_dictionary(structures_dictionary, structures_folder, file_name)
-
-                    # Source code transformation: abstract statement
-                    G = abstract_statements_from_identifiers(G)
-
-                    # Dump list of statements to be used in construct_vocabulary
-                    stmt_list = [e[2]['stmt'] for e in G.edges(data=True)]
-                    write_to = os.path.join(transformed_folder, file_name[:-3] + '.p')
-                    print('Writing transformed data to', write_to)
-                    i2v_utils.safe_pickle(stmt_list, write_to)
-
-                    ####################################################################################################
-                    # Build dual-XFG
-
-                    dual_graphs_filename = os.path.join(dual_graph_folder, file_name[:-3] + '.p')
-                    if not os.path.exists(dual_graphs_filename):
-
-                        print('Building dual graph for file ', file_name)
-
-                        G_diff = disambiguate_stmts(G)
-                        D = build_dual_graph(G_diff)     # dual-XFG
-                        check_sanity(D, G)               # check the sanity of the produced graph
-                        print_dxfg_to_file(D, dual_graph_folder, file_name)    # print data to external file
-
-                        # Write dual graphs to file
-                        print('Writing dual graphs to file ', dual_graphs_filename)
-                        i2v_utils.safe_pickle(D, dual_graphs_filename)
-                else:
-
-                    print('--- Found dual-xfg for file : ', file_name, ', skipping...')
-
-            ############################################################################################################
-            # Write file indicating that the folder has been preprocessed
-            f = open(data_preprocessing_done_filename, 'w')
-            f.close()
+    num_folder = len(folders_raw)
+    if not DEBUG:
+        # assign folders to different processes concurrently
+        with Pool(processes=PROCESSES) as pool:
+            _partial_func = partial(construct_xfg_single_raw_folder, num_folder=num_folder)
+            pool.map(_partial_func, enumerate(folders_raw), chunksize=1)
+    else:
+        for folder_counter, folder_raw in enumerate(folders_raw):
+            construct_xfg_single_raw_folder(params=(folder_counter, folder_raw), num_folder=num_folder)
 
     return folders_raw
