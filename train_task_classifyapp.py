@@ -284,7 +284,7 @@ def evaluate(model, embeddings, folder_data, samples_per_class, folder_results, 
     for i in range(1, num_classes + 1):  # loop over classes
 
         # training: Read data file names
-        folder = os.path.join(folder_data_train, str(i))
+        folder = os.path.join(folder_data_train, str(i))  # index i marks the target class
         assert os.path.exists(folder), "Folder: " + folder + ' does not exist'
         print('\ttraining  : Read file names from folder ', folder)
         listing = os.listdir(folder + '/')
@@ -294,7 +294,7 @@ def evaluate(model, embeddings, folder_data, samples_per_class, folder_results, 
         assert len(seq_files) >= samples_per_class, "Cannot sample " + str(samples_per_class) + " from " + str(
             len(seq_files)) + " files found in " + folder
         X_train += resample(seq_files, replace=False, n_samples=samples_per_class, random_state=seed)
-        y_train = np.concatenate([y_train, np.array([int(i)] * samples_per_class, dtype=np.int32)])
+        y_train = np.concatenate([y_train, np.array([int(i)] * samples_per_class, dtype=np.int32)])  # i becomes target
 
         # validation: Read data file names
         folder = os.path.join(folder_data_val, str(i))
