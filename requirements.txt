@@ -36,5 +36,5 @@ sklearn==0.0
 termcolor==1.1.0
 tornado==6.0.2
 umap==0.1.1
-Werkzeug==0.15.2
+werkzeug>=0.15.3
 wget==3.2
