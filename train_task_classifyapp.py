@@ -329,7 +329,7 @@ class NCC_classifyapp(object):
             self.model.load_weights(FLAGS.restore)
 
         # checkpoint
-        filepath = os.path.join(FLAGS.out, "/weights-improvement-{epoch:02d}-{val_acc:.2f}.hdf5")
+        filepath = os.path.join(FLAGS.out, "weights-improvement-{epoch:02d}-{val_acc:.2f}.hdf5")
         checkpoint_epoch = ModelCheckpoint(filepath, monitor='val_acc', verbose=0, 
                                            save_best_only=True, mode='max')
         checkpoint = WeightsSaver(self.model, FLAGS.save_every, FLAGS.ring_size)
