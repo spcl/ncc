@@ -52,6 +52,7 @@ flags.DEFINE_bool('print_summary', False, 'Print summary of Keras model')
 flags.DEFINE_integer('buckets', 10, 'Number of buckets to use for training (or zero for no buckets)')
 flags.DEFINE_string('bucketstr', None, 'Bucket adaptive histogram method (see numpy.histogram)')
 flags.DEFINE_string('restore', None, 'Path to model checkpoint to restore from.')
+flags.DEFINE_bool('force_no_cudnnlstm', False, 'use LSTM not CuDNNLSTM')
 
 FLAGS = flags.FLAGS
 
@@ -303,7 +304,7 @@ class NCC_classifyapp(object):
         # Keras model
         inp = Input(shape=(None, embedding_dim,), dtype="float32", name="code_in")
 
-        if tf.compat.v1.test.is_gpu_available(cuda_only=True):
+        if tf.compat.v1.test.is_gpu_available(cuda_only=True) and not FLAGS.force_no_cudnnlstm:
             from keras.layers import CuDNNLSTM
             x = CuDNNLSTM(embedding_dim, return_sequences=True, name="lstm_1")(inp)
             x = CuDNNLSTM(embedding_dim, name="lstm_2")(x)
