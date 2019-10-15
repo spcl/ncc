@@ -30,9 +30,11 @@ import os
 import numpy as np
 import tensorflow as tf
 import math
+import random
 import struct
 from keras import utils
 from keras.callbacks import Callback
+from keras.callbacks import ModelCheckpoint
 from absl import app
 from absl import flags
 
@@ -47,8 +49,9 @@ flags.DEFINE_integer('vsamples', 0, 'Sampling on validation set')
 flags.DEFINE_integer('save_every', 100, 'Save checkpoint every N batches')
 flags.DEFINE_integer('ring_size', 5, 'Checkpoint ring buffer length')
 flags.DEFINE_bool('print_summary', False, 'Print summary of Keras model')
-flags.DEFINE_integer('buckets', 0, 'Number of buckets to use for training (or zero for no buckets)')
+flags.DEFINE_integer('buckets', 10, 'Number of buckets to use for training (or zero for no buckets)')
 flags.DEFINE_string('bucketstr', None, 'Bucket adaptive histogram method (see numpy.histogram)')
+flags.DEFINE_string('restore', None, 'Path to model checkpoint to restore from.')
 
 FLAGS = flags.FLAGS
 
@@ -151,6 +154,10 @@ class EmbeddingSequence(utils.Sequence):
         x = self.x_seq[idx_begin:idx_end]
         emb_x = self.sess.run(self.lookup, feed_dict={self.xplace: x})
         return emb_x, self.y_1hot[idx_begin:idx_end]
+
+
+def _roundto(val, batch_size):
+    return int(math.ceil(val / batch_size)) * batch_size
 
 
 class EmbeddingPredictionSequence(utils.Sequence):
@@ -267,12 +274,12 @@ class WeightsSaver(Callback):
         self.ring = 0
 
     def on_epoch_end(self, epoch, logs={}):
-        name = FLAGS.out + '/epoch-%d.h5' % epoch
+        name = os.path.join(FLAGS.out, 'epoch-%d.h5' % epoch)
         self.model.save_weights(name)
 
     def on_batch_end(self, batch, logs={}):
         if self.batch % self.save_every == 0:
-            name = FLAGS.out + '/weights%d.h5' % self.ring
+            name = os.path.join(FLAGS.out, 'weights%d.h5' % self.ring)
             self.model.save_weights(name)
             self.ring = (self.ring + 1) % self.ring_size
         self.batch += 1
@@ -286,16 +293,24 @@ class NCC_classifyapp(object):
     __basename__ = "ncc_classifyapp"
 
     def init(self, seed: int, maxlen: int, embedding_dim: int, num_classes: int, dense_layer_size: int):
-        from keras.layers import Input, LSTM, Dense
+        from keras.layers import Input, Dense
         from keras.layers.normalization import BatchNormalization
         from keras.models import Model
+        import tensorflow as tf
 
         np.random.seed(seed)
 
         # Keras model
         inp = Input(shape=(None, embedding_dim,), dtype="float32", name="code_in")
-        x = LSTM(embedding_dim, implementation=1, return_sequences=True, name="lstm_1")(inp)
-        x = LSTM(embedding_dim, implementation=1, name="lstm_2")(x)
+
+        if tf.compat.v1.test.is_gpu_available(cuda_only=True):
+            from keras.layers import CuDNNLSTM
+            x = CuDNNLSTM(embedding_dim, return_sequences=True, name="lstm_1")(inp)
+            x = CuDNNLSTM(embedding_dim, name="lstm_2")(x)
+        else:
+            from keras.layers import LSTM
+            x = LSTM(embedding_dim, implementation=1, return_sequences=True, name="lstm_1")(inp)
+            x = LSTM(embedding_dim, implementation=1, name="lstm_2")(x)
 
         # Heuristic model: outputs 1-of-num_classes prediction
         x = BatchNormalization()(x)
@@ -329,7 +344,7 @@ class NCC_classifyapp(object):
             self.model.load_weights(FLAGS.restore)
 
         # checkpoint
-        filepath = os.path.join(FLAGS.out, "/weights-improvement-{epoch:02d}-{val_acc:.2f}.hdf5")
+        filepath = os.path.join(FLAGS.out, "weights-improvement-{epoch:02d}-{val_acc:.2f}.hdf5")
         checkpoint_epoch = ModelCheckpoint(filepath, monitor='val_acc', verbose=0, 
                                            save_best_only=True, mode='max')
         checkpoint = WeightsSaver(self.model, FLAGS.save_every, FLAGS.ring_size)
@@ -342,6 +357,7 @@ class NCC_classifyapp(object):
             print('Ctrl-C detected, saving weights to file')
             self.model.save_weights(os.path.join(FLAGS.out, 'weights-kill.h5'))
             import sys
+            print("weights have been saved to ", os.path.join(FLAGS.out, 'weights-kill.h5'))
             sys.exit(13)
             
 
