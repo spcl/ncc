@@ -630,6 +630,10 @@ def construct_vocabulary(data_folder, folders):
                 with open(D_file_open, 'rb') as f:
                     D = pickle.load(f)
 
+                # Skip empty graphs
+                if D.number_of_nodes() == 0:
+                    continue
+
                 # Build H-dictionary
                 H_dic = build_H_dictionary(D, context_width, folder_mat, base_filename, dictionary, stmts_cut_off)
                 print('Print to', to_dump)
