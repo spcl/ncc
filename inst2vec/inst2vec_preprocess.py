@@ -1094,7 +1094,7 @@ def basic_block_leaf(G, node, ids_in_basic_block):
     if G.out_degree(node) > 0:
         for n in G.successors(node):
             if n in ids_in_basic_block:
-                if G.node[n]['id'] != 'ad_hoc':
+                if G.nodes[n]['id'] != 'ad_hoc':
                     # Check whether the outgoing edge is a "store"
                     for e in G.out_edges(node, data=True):
                         if 'store' not in e[2]['stmt']:
