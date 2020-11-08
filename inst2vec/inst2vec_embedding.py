@@ -32,7 +32,7 @@ import os
 import subprocess
 import datetime
 import tensorflow as tf
-from tensorflow.contrib.tensorboard.plugins import projector
+from tensorboard.plugins import projector
 from tensorflow.python.client import timeline
 from datetime import datetime
 import random
@@ -70,7 +70,7 @@ def record_parser(record):
     Read the bytes of a string as a vector of numbers
     :return pair of integers (target-context indices)
     """
-    return tf.decode_raw(record, tf.int32)
+    return tf.io.decode_raw(record, tf.int32)
 
 
 ########################################################################################################################
@@ -147,17 +147,17 @@ def train_skip_gram(V, data_folder, data_folders, dataset_size, reverse_dictiona
     options = None
     metadata = None
     if FLAGS.profile:
-        options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-        metadata = tf.RunMetadata()
+        options = tf.compat.v1.RunOptions(trace_level=tf.compat.v1.RunOptions.FULL_TRACE)
+        metadata = tf.compat.v1.RunMetadata()
     if FLAGS.xla:
-        config = tf.ConfigProto()
-        config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
+        config = tf.compat.v1.ConfigProto()
+        config.graph_options.optimizer_options.global_jit_level = tf.compat.v1.OptimizerOptions.ON_1
 
     ####################################################################################################################
     # Read data using Tensorflow's data API
     data_files = get_data_pair_files(data_folders, context_width)
     print('\ttraining with data from files:', data_files)
-    with tf.name_scope("Reader") as scope:
+    with tf.compat.v1.name_scope("Reader") as scope:
 
         random.shuffle(data_files)
         dataset_raw = tf.data.FixedLengthRecordDataset(filenames=data_files,
@@ -166,45 +166,45 @@ def train_skip_gram(V, data_folder, data_folders, dataset_size, reverse_dictiona
         dataset = dataset.shuffle(int(1e5))
         dataset_batched = dataset.apply(tf.contrib.data.batch_and_drop_remainder(mini_batch_size))
         dataset_batched = dataset_batched.prefetch(int(100000000))
-        iterator = dataset_batched.make_initializable_iterator()
-        saveable_iterator = tf.contrib.data.make_saveable_from_iterator(iterator)
+        iterator = tf.compat.v1.data.make_initializable_iterator(dataset_batched)
+        saveable_iterator = tf.data.experimental.make_saveable_from_iterator(iterator)
         next_batch = iterator.get_next()  # Tensor("Shape:0", shape=(2,), dtype=int32)
 
     ####################################################################################################################
     # Tensorflow computational graph
     # Placeholders for inputs
-    with tf.name_scope("Input_Data") as scope:
+    with tf.compat.v1.name_scope("Input_Data") as scope:
         train_inputs = next_batch[:, 0]
         train_labels = tf.reshape(next_batch[:, 1], shape=[mini_batch_size, 1], name="training_labels")
 
     # (input) Embedding matrix
-    with tf.name_scope("Input_Layer") as scope:
-        W_in = tf.Variable(tf.random_uniform([V, N], -1.0, 1.0), name="input-embeddings")
+    with tf.compat.v1.name_scope("Input_Layer") as scope:
+        W_in = tf.Variable(tf.random.uniform([V, N], -1.0, 1.0), name="input-embeddings")
 
         # Look up the vector representing each source word in the batch (fetches rows of the embedding matrix)
-        h = tf.nn.embedding_lookup(W_in, train_inputs, name="input_embedding_vectors")
+        h = tf.nn.embedding_lookup(params=W_in, ids=train_inputs, name="input_embedding_vectors")
 
     # Normalized embedding matrix
-    with tf.name_scope("Embeddings_Normalized") as scope:
+    with tf.compat.v1.name_scope("Embeddings_Normalized") as scope:
         normalized_embeddings = tf.nn.l2_normalize(W_in, name="embeddings_normalized")
 
     # (output) Embedding matrix ("output weights")
-    with tf.name_scope("Output_Layer") as scope:
+    with tf.compat.v1.name_scope("Output_Layer") as scope:
         if FLAGS.softmax:
-            W_out = tf.Variable(tf.truncated_normal([N, V], stddev=1.0 / math.sqrt(N)), name="output_embeddings")
+            W_out = tf.Variable(tf.random.truncated_normal([N, V], stddev=1.0 / math.sqrt(N)), name="output_embeddings")
         else:
-            W_out = tf.Variable(tf.truncated_normal([V, N], stddev=1.0 / math.sqrt(N)), name="output_embeddings")
+            W_out = tf.Variable(tf.random.truncated_normal([V, N], stddev=1.0 / math.sqrt(N)), name="output_embeddings")
 
         # Biases between hidden layer and output layer
         b_out = tf.Variable(tf.zeros([V]), name="nce_bias")
 
     # Optimization
-    with tf.name_scope("Optimization_Block") as scope:
+    with tf.compat.v1.name_scope("Optimization_Block") as scope:
         # Loss function
         if FLAGS.softmax:
-            logits = tf.layers.dense(inputs=h, units=V)
+            logits = tf.compat.v1.layers.dense(inputs=h, units=V)
             onehot = tf.one_hot(train_labels, V)
-            loss_tensor = tf.nn.softmax_cross_entropy_with_logits_v2(labels=onehot, logits=logits)
+            loss_tensor = tf.nn.softmax_cross_entropy_with_logits(labels=tf.stop_gradient(onehot), logits=logits)
         else:
             loss_tensor = tf.nn.nce_loss(weights=W_out,
                                          biases=b_out,
@@ -212,14 +212,14 @@ def train_skip_gram(V, data_folder, data_folders, dataset_size, reverse_dictiona
                                          inputs=h,
                                          num_sampled=num_sampled,
                                          num_classes=V)
-        train_loss = tf.reduce_mean(loss_tensor, name="nce_loss")
+        train_loss = tf.reduce_mean(input_tensor=loss_tensor, name="nce_loss")
 
         # Regularization (optional)
         if l2_reg_scale > 0:
-            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, W_in)
-            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, W_out)
-            regularizer = tf.contrib.layers.l2_regularizer(l2_reg_scale)
-            reg_variables = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+            tf.compat.v1.add_to_collection(tf.compat.v1.GraphKeys.REGULARIZATION_LOSSES, W_in)
+            tf.compat.v1.add_to_collection(tf.compat.v1.GraphKeys.REGULARIZATION_LOSSES, W_out)
+            regularizer = tf.keras.regularizers.l2(0.5 * (l2_reg_scale))
+            reg_variables = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.REGULARIZATION_LOSSES)
             reg_term = tf.contrib.layers.apply_regularization(regularizer, reg_variables)
             loss = train_loss + reg_term
         else:
@@ -227,14 +227,14 @@ def train_skip_gram(V, data_folder, data_folders, dataset_size, reverse_dictiona
 
         # Optimizer
         if FLAGS.optimizer == 'adam':
-            optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
+            optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
         elif FLAGS.optimizer == 'nadam':
             optimizer = tf.contrib.opt.NadamOptimizer(learning_rate=learning_rate).minimize(loss)
         elif FLAGS.optimizer == 'momentum':
             global_train_step = tf.Variable(0, trainable=False, dtype=tf.int32, name="global_step")
             # Passing global_step to minimize() will increment it at each step.
             optimizer = (
-                tf.train.MomentumOptimizer(learning_rate, 0.9).minimize(loss, global_step=global_train_step)
+                tf.compat.v1.train.MomentumOptimizer(learning_rate, 0.9).minimize(loss, global_step=global_train_step)
             )
         else:
             raise ValueError('Unrecognized optimizer ' + FLAGS.optimizer)
@@ -244,37 +244,37 @@ def train_skip_gram(V, data_folder, data_folders, dataset_size, reverse_dictiona
 
     ####################################################################################################################
     # Validation block
-    with tf.name_scope("Validation_Block") as scope:
+    with tf.compat.v1.name_scope("Validation_Block") as scope:
         valid_dataset = tf.constant(valid_examples, dtype=tf.int32, name="validation_data_size")
-        valid_embeddings = tf.nn.embedding_lookup(normalized_embeddings, valid_dataset)
+        valid_embeddings = tf.nn.embedding_lookup(params=normalized_embeddings, ids=valid_dataset)
         cosine_similarity = tf.matmul(valid_embeddings, normalized_embeddings, transpose_b=True)
 
     ####################################################################################################################
     # Summaries
-    with tf.name_scope("Summaries") as scope:
-        tf.summary.histogram("input_embeddings", W_in)
-        tf.summary.histogram("input_embeddings_normalized", normalized_embeddings)
-        tf.summary.histogram("output_embeddings", W_out)
-        tf.summary.scalar("nce_loss", loss)
+    with tf.compat.v1.name_scope("Summaries") as scope:
+        tf.compat.v1.summary.histogram("input_embeddings", W_in)
+        tf.compat.v1.summary.histogram("input_embeddings_normalized", normalized_embeddings)
+        tf.compat.v1.summary.histogram("output_embeddings", W_out)
+        tf.compat.v1.summary.scalar("nce_loss", loss)
 
         analogy_score_tensor = tf.Variable(0, trainable=False, dtype=tf.int32, name="analogy_score")
-        tf.summary.scalar("analogy_score", analogy_score_tensor)
+        tf.compat.v1.summary.scalar("analogy_score", analogy_score_tensor)
 
     ####################################################################################################################
     # Misc.
     restore_completed = False
-    init = tf.global_variables_initializer()        # variables initializer
-    summary_op = tf.summary.merge_all()             # merge summaries into one operation
+    init = tf.compat.v1.global_variables_initializer()        # variables initializer
+    summary_op = tf.compat.v1.summary.merge_all()             # merge summaries into one operation
 
     ####################################################################################################################
     # Training
-    with tf.Session(config=config) as sess:
+    with tf.compat.v1.Session(config=config) as sess:
 
         # Add TensorBoard components
-        writer = tf.summary.FileWriter(log_dir)  # create summary writer
+        writer = tf.compat.v1.summary.FileWriter(log_dir)  # create summary writer
         writer.add_graph(sess.graph)
-        gvars = [gvar for gvar in tf.global_variables() if 'analogy_score' not in gvar.name]
-        saver = tf.train.Saver(gvars, max_to_keep=5)  # create checkpoint saver
+        gvars = [gvar for gvar in tf.compat.v1.global_variables() if 'analogy_score' not in gvar.name]
+        saver = tf.compat.v1.train.Saver(gvars, max_to_keep=5)  # create checkpoint saver
         config = projector.ProjectorConfig()  # create projector config
         embedding = config.embeddings.add()  # add embeddings visualizer
         embedding.tensor_name = W_in.name
@@ -293,10 +293,10 @@ def train_skip_gram(V, data_folder, data_folders, dataset_size, reverse_dictiona
 
         else:  # save the computational graph to file and initialize variables
 
-            graph_saver = tf.train.Saver(allow_empty=True)
+            graph_saver = tf.compat.v1.train.Saver(allow_empty=True)
             init.run()
             graph_saver.save(sess, ckpt_saver_file_init, global_step=0, write_meta_graph=True)
-            tf.add_to_collection(tf.GraphKeys.SAVEABLE_OBJECTS, saveable_iterator)
+            tf.compat.v1.add_to_collection(tf.compat.v1.GraphKeys.SAVEABLE_OBJECTS, saveable_iterator)
             print("\tVariables initialized in TensorFlow")
 
         # Compute the necessary number of steps for this epoch as well as how often to print the avg loss
