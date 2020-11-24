@@ -16,3 +16,4 @@ task/classifyapp/classifyapp_data.zip
 task/devmap/*
 task/threadcoarsening/*
 env/
+llvm_ir_data/
