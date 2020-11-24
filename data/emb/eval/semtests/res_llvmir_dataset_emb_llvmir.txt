@@ -1,0 +1,98 @@
+Testing category "add" ...Statements in category    :     44
+Statements out of category:  8,521
+processed 0 outer stmts
+processed 5 outer stmts
+processed 10 outer stmts
+processed 15 outer stmts
+processed 20 outer stmts
+processed 25 outer stmts
+processed 30 outer stmts
+processed 35 outer stmts
+processed 40 outer stmts
+Score: 76.64238556998714%Testing category "fadd" ...Statements in category    :     28
+Statements out of category:  8,537
+processed 0 outer stmts
+processed 5 outer stmts
+processed 10 outer stmts
+processed 15 outer stmts
+processed 20 outer stmts
+processed 25 outer stmts
+Score: 82.82422049553361%Testing category "sub" ...Statements in category    :     26
+Statements out of category:  8,539
+processed 0 outer stmts
+processed 5 outer stmts
+processed 10 outer stmts
+processed 15 outer stmts
+processed 20 outer stmts
+processed 25 outer stmts
+Score: 70.26778491446485%Testing category "fsub" ...Statements in category    :     23
+Statements out of category:  8,542
+processed 0 outer stmts
+processed 5 outer stmts
+processed 10 outer stmts
+processed 15 outer stmts
+processed 20 outer stmts
+Score: 86.09132461503864%Testing category "mul" ...Statements in category    :     35
+Statements out of category:  8,530
+processed 0 outer stmts
+processed 5 outer stmts
+processed 10 outer stmts
+processed 15 outer stmts
+processed 20 outer stmts
+processed 25 outer stmts
+processed 30 outer stmts
+Score: 79.32322893987607%Testing category "fmul" ...Statements in category    :     31
+Statements out of category:  8,534
+processed 0 outer stmts
+processed 5 outer stmts
+processed 10 outer stmts
+processed 15 outer stmts
+processed 20 outer stmts
+processed 25 outer stmts
+processed 30 outer stmts
+Score: 87.50009449866567%Testing category "ret" ...Statements in category    :     46
+Statements out of category:  8,519
+processed 0 outer stmts
+processed 5 outer stmts
+processed 10 outer stmts
+processed 15 outer stmts
+processed 20 outer stmts
+processed 25 outer stmts
+processed 30 outer stmts
+processed 35 outer stmts
+processed 40 outer stmts
+processed 45 outer stmts
+Score: 71.19256586442468%Testing category "fdiv" ...Statements in category    :     15
+Statements out of category:  8,550
+processed 0 outer stmts
+processed 5 outer stmts
+processed 10 outer stmts
+Score: 89.71695906432748%Testing category "udiv" ...Statements in category    :      6
+Statements out of category:  8,559
+processed 0 outer stmts
+processed 5 outer stmts
+Score: 74.81870935078085%Testing category "sdiv" ...Statements in category    :      6
+Statements out of category:  8,559
+processed 0 outer stmts
+processed 5 outer stmts
+Score: 84.08108423881295%Testing category "bitwise binary" ...Statements in category    :     86
+Statements out of category:  8,479
+processed 0 outer stmts
+processed 5 outer stmts
+processed 10 outer stmts
+processed 15 outer stmts
+processed 20 outer stmts
+processed 25 outer stmts
+processed 30 outer stmts
+processed 35 outer stmts
+processed 40 outer stmts
+processed 45 outer stmts
+processed 50 outer stmts
+processed 55 outer stmts
+processed 60 outer stmts
+processed 65 outer stmts
+processed 70 outer stmts
+processed 75 outer stmts
+processed 80 outer stmts
+processed 85 outer stmts
+Score: 77.5976101897518%
