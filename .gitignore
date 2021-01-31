@@ -3,10 +3,11 @@ __pycache__
 **/.DS_Store
 **/._.DS_Store
 venv/
-data/*/
 data/*.zip
 *.np
 *.html
+*.tmp
+*.temp
 published_results/devmap
 published_results/threadcoarsening
 published_results/vocabulary
@@ -14,3 +15,5 @@ task/classifyapp/*/
 task/classifyapp/classifyapp_data.zip
 task/devmap/*
 task/threadcoarsening/*
+env/
+llvmir_dataset/
