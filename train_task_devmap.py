@@ -378,7 +378,7 @@ def main(argv):
     if not os.path.exists(os.path.join(input_data, 'kernels_ir')):
 
         # Download data
-        task_utils.download_and_unzip('https://polybox.ethz.ch/index.php/s/U08Z3xLhvbLk8io/download',
+        task_utils.download_and_unzip('http://spclstorage.inf.ethz.ch/projects/ncc/tasks/devmap_data.zip',
                                       'devmap_training_data', input_data)
 
     task_utils.llvm_ir_to_trainable(os.path.join(input_data, 'kernels_ir'))
