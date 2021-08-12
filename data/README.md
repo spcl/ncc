@@ -4,17 +4,17 @@
 
 Dataset name | Source
 ------------ | -------------
-Tensorflow | https://polybox.ethz.ch/index.php/s/ojd0RPFOtUTPPRr
-AMD APP SDK | https://polybox.ethz.ch/index.php/s/SaKQ9L7dGs9zJXK
-BLAS | https://polybox.ethz.ch/index.php/s/5ASMNv6dYsPKjyQ
-PolybenchGPU | https://polybox.ethz.ch/index.php/s/nomO17gdAfHjqFQ
-Rodinia | https://polybox.ethz.ch/index.php/s/J93jGpevs0lHsHM
-SHOC | https://polybox.ethz.ch/index.php/s/7KGEq1Q45Xg0IeL
-Linux kernel | https://polybox.ethz.ch/index.php/s/uxAAONROj1Id65y
-OpenCV | https://polybox.ethz.ch/index.php/s/KnWjolzAL2xxKWN
-Eigen (synthetic) | https://polybox.ethz.ch/index.php/s/52wWiK5fjRGHLJR
-GEMM synthetic | https://polybox.ethz.ch/index.php/s/Bm6cwAY3eVkR6v3
-Stencil synthetic | https://polybox.ethz.ch/index.php/s/OOmylxGcBxQM1D3
+Tensorflow | http://spclstorage.inf.ethz.ch/projects/ncc/datasets/tensorflow.zip
+AMD APP SDK | http://spclstorage.inf.ethz.ch/projects/ncc/datasets/amdappsdk.zip
+BLAS | http://spclstorage.inf.ethz.ch/projects/ncc/datasets/blas.zip
+PolybenchGPU | http://spclstorage.inf.ethz.ch/projects/ncc/datasets/polybenchgpu.zip
+Rodinia | http://spclstorage.inf.ethz.ch/projects/ncc/datasets/rodinia.zip
+SHOC | http://spclstorage.inf.ethz.ch/projects/ncc/datasets/shoc.zip
+Linux kernel | http://spclstorage.inf.ethz.ch/projects/ncc/datasets/linuxkernel.zip
+OpenCV | http://spclstorage.inf.ethz.ch/projects/ncc/datasets/opencv.zip
+Eigen (synthetic) | http://spclstorage.inf.ethz.ch/projects/ncc/datasets/eigen-synth.zip
+GEMM synthetic | http://spclstorage.inf.ethz.ch/projects/ncc/datasets/gemm-synth.zip
+Stencil synthetic | http://spclstorage.inf.ethz.ch/projects/ncc/datasets/stencil-synth.zip
 
 **Datasets available for download upon request**
 
