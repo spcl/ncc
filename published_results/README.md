@@ -2,7 +2,7 @@
 
 ## Pre-trained [embeddings](emb.p)
 
-**Data set and [vocabulary](https://polybox.ethz.ch/index.php/s/AWKd60qR63yViH8)**
+**Data set and [vocabulary](http://spclstorage.inf.ethz.ch/projects/ncc/vocabulary.zip)**
 
 Dataset | Files | LLVM IR lines | Vocabulary size | XFG stmt pairs
 ------------ | ------------- | ------------- | ------------- | -------------
@@ -65,7 +65,7 @@ AMD Tahiti 7970 | 2.91 | 3.34 | 3.42
 NVIDIA GTX 970 | 1.26 | 1.41 | 1.39
 
 
-**Optimal thread coarsening factor prediction [here](https://polybox.ethz.ch/index.php/s/F8FVQV1vig2KgPB)**
+**Optimal thread coarsening factor prediction [here](http://spclstorage.inf.ethz.ch/projects/ncc/threadcoarsening.zip)**
 
 **Speedups**
 
