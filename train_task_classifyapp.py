@@ -450,7 +450,7 @@ def main(argv):
     # Acquire data
     if not os.path.exists(os.path.join(folder_data, 'ir_train')):
         # Download data
-        task_utils.download_and_unzip('https://polybox.ethz.ch/index.php/s/JOBjrfmAjOeWCyl/download',
+        task_utils.download_and_unzip('http://spclstorage.inf.ethz.ch/projects/ncc/tasks/classifyapp_data.zip',
                                       'classifyapp_training_data', folder_data)
 
     task_utils.llvm_ir_to_trainable(os.path.join(folder_data, 'ir_train'))
