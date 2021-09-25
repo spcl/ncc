@@ -39,17 +39,17 @@ def datagen(data_folder):
 
     ####################################################################################################################
     # Download and unzip inst2vec training data
-    download_and_unzip('https://polybox.ethz.ch/index.php/s/SaKQ9L7dGs9zJXK/download', 'AMD', data_folder)
-    download_and_unzip('https://polybox.ethz.ch/index.php/s/5ASMNv6dYsPKjyQ/download', 'BLAS', data_folder)
-    download_and_unzip('https://polybox.ethz.ch/index.php/s/52wWiK5fjRGHLJR/download', 'eigen_synthetic', data_folder)
-    download_and_unzip('https://polybox.ethz.ch/index.php/s/Bm6cwAY3eVkR6v3/download', 'gemm_synthetic', data_folder)
-    download_and_unzip('https://polybox.ethz.ch/index.php/s/uxAAONROj1Id65y/download', 'linux-4.15', data_folder)
-    download_and_unzip('https://polybox.ethz.ch/index.php/s/KnWjolzAL2xxKWN/download', 'opencv', data_folder)
-    download_and_unzip('https://polybox.ethz.ch/index.php/s/nomO17gdAfHjqFQ/download', 'polybenchGPU', data_folder)
-    download_and_unzip('https://polybox.ethz.ch/index.php/s/J93jGpevs0lHsHM/download', 'rodinia_3.1', data_folder)
-    download_and_unzip('https://polybox.ethz.ch/index.php/s/7KGEq1Q45Xg0IeL/download', 'shoc', data_folder)
-    download_and_unzip('https://polybox.ethz.ch/index.php/s/OOmylxGcBxQM1D3/download', 'stencil_synthetic', data_folder)
-    download_and_unzip('https://polybox.ethz.ch/index.php/s/ojd0RPFOtUTPPRr/download', 'tensorflow', data_folder)
+    download_and_unzip('http://spclstorage.inf.ethz.ch/projects/ncc/datasets/amdappsdk.zip', 'AMD', data_folder)
+    download_and_unzip('http://spclstorage.inf.ethz.ch/projects/ncc/datasets/blas.zip', 'BLAS', data_folder)
+    download_and_unzip('http://spclstorage.inf.ethz.ch/projects/ncc/datasets/eigen-synth.zip', 'eigen_synthetic', data_folder)
+    download_and_unzip('http://spclstorage.inf.ethz.ch/projects/ncc/datasets/gemm-synth.zip', 'gemm_synthetic', data_folder)
+    download_and_unzip('http://spclstorage.inf.ethz.ch/projects/ncc/datasets/linuxkernel.zip', 'linux-4.15', data_folder)
+    download_and_unzip('http://spclstorage.inf.ethz.ch/projects/ncc/datasets/opencv.zip', 'opencv', data_folder)
+    download_and_unzip('http://spclstorage.inf.ethz.ch/projects/ncc/datasets/polybenchgpu.zip', 'polybenchGPU', data_folder)
+    download_and_unzip('http://spclstorage.inf.ethz.ch/projects/ncc/datasets/rodinia.zip', 'rodinia_3.1', data_folder)
+    download_and_unzip('http://spclstorage.inf.ethz.ch/projects/ncc/datasets/shoc.zip', 'shoc', data_folder)
+    download_and_unzip('http://spclstorage.inf.ethz.ch/projects/ncc/datasets/stencil-synth.zip', 'stencil_synthetic', data_folder)
+    download_and_unzip('http://spclstorage.inf.ethz.ch/projects/ncc/datasets/tensorflow.zip', 'tensorflow', data_folder)
 
     ####################################################################################################################
     # Remove __MACOSX directory resulting from unzipping

@@ -381,7 +381,7 @@ def main(argv):
     if not os.path.exists(os.path.join(input_data, 'kernels_ir')):
 
         # Download data
-        task_utils.download_and_unzip('https://polybox.ethz.ch/index.php/s/Dl8v8dKbuoWS3Ck/download',
+        task_utils.download_and_unzip('http://spclstorage.inf.ethz.ch/projects/ncc/tasks/threadcoarsening_data.zip',
                                       'threadcoarsening_training_data', input_data)
 
     task_utils.llvm_ir_to_trainable(os.path.join(input_data, 'kernels_ir'))

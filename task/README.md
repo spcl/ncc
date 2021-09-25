@@ -4,6 +4,6 @@
 
 Task | Download link
 ------------ | -------------
-classifyapp | https://polybox.ethz.ch/index.php/s/JOBjrfmAjOeWCyl
-devmap | https://polybox.ethz.ch/index.php/s/U08Z3xLhvbLk8io
-threadcoarsening | https://polybox.ethz.ch/index.php/s/Dl8v8dKbuoWS3Ck
+classifyapp | http://spclstorage.inf.ethz.ch/projects/ncc/tasks/classifyapp_data.zip
+devmap | http://spclstorage.inf.ethz.ch/projects/ncc/tasks/devmap_data.zip
+threadcoarsening | http://spclstorage.inf.ethz.ch/projects/ncc/tasks/threadcoarsening_data.zip
