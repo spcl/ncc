@@ -346,12 +346,12 @@ def build_H_dictionary(D, skip_window, folder, filename, dictionary, stmts_cut_o
                     print('Load A mat from', A_file)
                     A = sparse.load_npz(A_file)
                 else:
-                    A *= A1
+                    A @= A1
                     if sys.getsizeof(A1) < 45e5:
                         print('Saving A mat to', A_file)
                         sparse.save_npz(A_file, A)
             else:
-                A *= A1
+                A @= A1
 
             A_context += A
 
