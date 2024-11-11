@@ -21,21 +21,22 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # ==============================================================================
 """inst2vec embedding intrinsic evaluation"""
+from absl import flags
+from sklearn.manifold import TSNE
+import umap
+from bokeh.palettes import Category20
+from bokeh.models import CategoricalColorMapper, ColumnDataSource
+from bokeh.plotting import figure, output_file, show
+from inst2vec import inst2vec_appflags
+from inst2vec import inst2vec_analogygen as analogygen
+from inst2vec import inst2vec_utils as i2v_utils
+import rgx_utils as rgx
+import numpy as np
 import os
 import pickle
 import re
-import tensorflow as tf
-import numpy as np
-import rgx_utils as rgx
-from inst2vec import inst2vec_utils as i2v_utils
-from inst2vec import inst2vec_analogygen as analogygen
-from inst2vec import inst2vec_appflags
-from bokeh.plotting import figure, output_file, show
-from bokeh.models import CategoricalColorMapper, ColumnDataSource
-from bokeh.palettes import Category20
-import umap
-from sklearn.manifold import TSNE
-from absl import flags
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 FLAGS = flags.FLAGS
 
@@ -56,7 +57,8 @@ def write_score_summary(scores, analogy_types, filename):
     w = '120'
 
     # Header
-    out = '-' * int(w) + '\n' + filename + ': score summary' + '\n' + '-' * int(w) + '\n'
+    out = '-' * int(w) + '\n' + filename + ': score summary' + \
+        '\n' + '-' * int(w) + '\n'
     out += '{:<65}\t{:>12}\t{:>12}\t{:>15}\n'.format(
         'Analogy type', '#corr answ', '#questions', 'corr answ [%]')
 
@@ -67,7 +69,8 @@ def write_score_summary(scores, analogy_types, filename):
         perc = s * 100.0 / nq
 
         # Write the line containing all information pertaining to this analogy type
-        out += '{:<65}\t{:>12}\t{:>12}\t{:>15.4g}\n'.format(analogy_type, s, nq, perc)
+        out += '{:<65}\t{:>12}\t{:>12}\t{:>15.4g}\n'.format(
+            analogy_type, s, nq, perc)
 
     return out
 
@@ -133,10 +136,14 @@ def load_analogy_questions(analogy_questions_file, dictionary):
 
                 # a new analogy question element
                 n_questions += 1
-                word_A = line.strip();          assert len(word_A) > 0, "Malformed question at line " + str(i)
-                word_B = raw_data[i+1].strip(); assert len(word_A) > 0, "Malformed question at line " + str(i)
-                word_X = raw_data[i+2].strip(); assert len(word_A) > 0, "Malformed question at line " + str(i)
-                word_Y = raw_data[i+3].strip(); assert len(word_A) > 0, "Malformed question at line " + str(i)
+                word_A = line.strip()
+                assert len(word_A) > 0, "Malformed question at line " + str(i)
+                word_B = raw_data[i+1].strip()
+                assert len(word_A) > 0, "Malformed question at line " + str(i)
+                word_X = raw_data[i+2].strip()
+                assert len(word_A) > 0, "Malformed question at line " + str(i)
+                word_Y = raw_data[i+3].strip()
+                assert len(word_A) > 0, "Malformed question at line " + str(i)
                 words = [word_A, word_B, word_X, word_Y]
 
                 # skip to the end of the question
@@ -185,7 +192,8 @@ def load_analogy_questions(analogy_questions_file, dictionary):
         for j in range(row + 1, nrows):
             if np.array_equal(super_a[row], super_a[j]):  # compare rows
                 # assert False, "Found duplicate questions in file " + analogy_questions_file
-                print("Found duplicate questions in file " + analogy_questions_file)
+                print("Found duplicate questions in file " +
+                      analogy_questions_file)
 
     # Print the number of "relevant questions"
     print('\tof which {:>10,d} are compatible with this dataset'.format(nrows))
@@ -225,18 +233,21 @@ def load_analogies(data_folder):
 
         # Dump analogies into a file to be reused
         print('\n--- Writing analogies into file ', analogy_questions_file_dump)
-        i2v_utils.safe_pickle([analogies, analogy_types, n_questions_total, n_questions_relevant], analogy_questions_file_dump)
+        i2v_utils.safe_pickle([analogies, analogy_types, n_questions_total,
+                               n_questions_relevant], analogy_questions_file_dump)
 
     else:
 
         # Load analogies from binary file
         print('\n--- Loading analogies from file ', analogy_questions_file_dump)
         with open(analogy_questions_file_dump, 'rb') as f:
-            analogies, analogy_types, n_questions_total, n_questions_relevant = pickle.load(f)
+            analogies, analogy_types, n_questions_total, n_questions_relevant = pickle.load(
+                f)
 
     # Print info
     print('\tFound    {:>10,d} analogy-questions, '.format(n_questions_total))
-    print('\tof which {:>10,d} are compatible with this vocabulary'.format(n_questions_relevant))
+    print('\tof which {:>10,d} are compatible with this vocabulary'.format(
+        n_questions_relevant))
 
     return analogies, analogy_types, n_questions_total, n_questions_relevant
 
@@ -274,7 +285,8 @@ def evaluate_analogies(W, reverse_dictionary, analogies, analogy_types, results_
     vocabulary_size, embedding_dimension = W.shape
     assert vocabulary_size_dic == vocabulary_size, \
         "Vocabulary size of embedding matrix (" + str(vocabulary_size) + \
-        ") does not match vocabulary size of dictionary (" + str(vocabulary_size_dic) + ")"
+        ") does not match vocabulary size of dictionary (" + str(
+            vocabulary_size_dic) + ")"
 
     # Embedding vectors corresponding to the input words (dim = [N, embedding dimension])
     embedded_a = tf.nn.embedding_lookup(embedding_matrix, analogy_a)
@@ -296,7 +308,8 @@ def evaluate_analogies(W, reverse_dictionary, analogies, analogy_types, results_
     # Find the words with the lowest distance to pred_d
     # pred_dist holds values of distances (dim = [N, k])
     # pred_idx holds indices in dist_pred_vocab, which corresponds to the indices of words in the vocab (dim = [N, k])
-    pred_dist, pred_idx = tf.nn.top_k(dist_pred_vocab, n_top)  # cosine similarity is in [-1, 1]
+    # cosine similarity is in [-1, 1]
+    pred_dist, pred_idx = tf.nn.top_k(dist_pred_vocab, n_top)
 
     # Evaluate analogies
     scores = list()
@@ -310,14 +323,17 @@ def evaluate_analogies(W, reverse_dictionary, analogies, analogy_types, results_
         # Loop over the different types of analogies
         for i in range(len(analogies)):
 
-            print('Evaluating analogies of type {:<80} ({:>2} of {:>2})'.format(analogy_types[i], i, len(analogies)))
+            print('Evaluating analogies of type {:<80} ({:>2} of {:>2})'.format(
+                analogy_types[i], i, len(analogies)))
 
             # Helper variables
             correct_answers = 0  # accumulate the number of correct answers in this analogy type
-            n_questions = len(analogies[i])  # number of questions to evaluate in this analogy type
+            # number of questions to evaluate in this analogy type
+            n_questions = len(analogies[i])
 
             # Compute answers
-            sub = analogies[i]  # subset of "analogies": the questions corresponding to this analogy type
+            # subset of "analogies": the questions corresponding to this analogy type
+            sub = analogies[i]
 
             dist, idx = sess.run([pred_dist, pred_idx], {
                 analogy_a: sub[:, 0],
@@ -354,8 +370,10 @@ def evaluate_analogies(W, reverse_dictionary, analogies, analogy_types, results_
                 # Do scoring
                 if answered_correctly:
                     correct_answers += 1
-                    correct_answers_q_.append(sub[q, :])  # add the question to the correctly answered questions
-                    correct_answers_a_.append(idx[q, :])  # add the top closest words to the correct answers
+                    # add the question to the correctly answered questions
+                    correct_answers_q_.append(sub[q, :])
+                    # add the top closest words to the correct answers
+                    correct_answers_a_.append(idx[q, :])
                 else:
                     incorrect_answers_q_.append(sub[q, :])
                     incorrect_answers_a_.append(idx[q, :])
@@ -375,14 +393,16 @@ def evaluate_analogies(W, reverse_dictionary, analogies, analogy_types, results_
     # Print score to file
     print('\n\tPrinting evaluation scores to file ', results_filename)
     w = '120'  # column width in printout
-    line_q = '\n{:<' + w + '}\n{:<' + w + '}\n{:<' + w + '}\nexpected answer:\n\t\t{:<' + w + '}\n'
+    line_q = '\n{:<' + w + '}\n{:<' + w + '}\n{:<' + \
+        w + '}\nexpected answer:\n\t\t{:<' + w + '}\n'
     line_a = '\t\t{:<' + w + '}\n'
     line_a *= n_top
     line_a = 'Nearest neighbors:\n' + line_a
     with open(results_filename, 'w') as f:
 
         # Write file header
-        f.write('-' * int(w) + '\n' + 'Score summary' + '\n' + '-' * int(w) + '\n')
+        f.write('-' * int(w) + '\n' + 'Score summary' +
+                '\n' + '-' * int(w) + '\n')
         f.write('{:<85}\t{:<18}\t{:<12}\t{:<20}\n'.format(
             'Analogy type',
             '#correct answers', '#questions', 'correct answers [%]'))
@@ -407,7 +427,8 @@ def evaluate_analogies(W, reverse_dictionary, analogies, analogy_types, results_
         # Loop over analogy types
         for i in range(len(analogies)):
             # Write the line containing all information pertaining to this analogy type
-            f.write('-' * int(w) + '\n' + analogy_types[i] + '\n' + '-' * int(w))
+            f.write('-' * int(w) + '\n' +
+                    analogy_types[i] + '\n' + '-' * int(w))
 
             f.write('\n--- Correct predictions:')
             if len(correct_answers_q[i]) > 0:
@@ -484,22 +505,27 @@ def analogies(eval_folder, embeddings, embeddings_file, dictionary, reverse_dict
         # Load analogies from binary file
         print('\n--- Loading analogies from file ', analogy_questions_file_dump)
         with open(analogy_questions_file_dump, 'rb') as f:
-            analogies, analogy_types, n_questions_total, n_questions_relevant = pickle.load(f)
+            analogies, analogy_types, n_questions_total, n_questions_relevant = pickle.load(
+                f)
 
     # Print info
-    print('\tFound    {:>10,d} analogy-questions in total, '.format(n_questions_total))
-    print('\tof which {:>10,d} are compatible with this vocabulary'.format(n_questions_relevant))
+    print(
+        '\tFound    {:>10,d} analogy-questions in total, '.format(n_questions_total))
+    print('\tof which {:>10,d} are compatible with this vocabulary'.format(
+        n_questions_relevant))
 
     # Evaluate
     summary = ''
     score_list = list()
 
     # Evaluate analogies in the embedding space
-    analogy_eval_file = os.path.join(folder_analogies, 'res_' + embeddings_file[:-2].replace('/', '_') + '.txt')
+    analogy_eval_file = os.path.join(
+        folder_analogies, 'res_' + embeddings_file[:-2].replace('/', '_') + '.txt')
     print('\n--- Starting analogy evaluation')
 
     # List of pairs (number of correctly answered questions in category, number of questions in category)
-    scores = evaluate_analogies(embeddings, reverse_dictionary, analogies, analogy_types, analogy_eval_file)
+    scores = evaluate_analogies(
+        embeddings, reverse_dictionary, analogies, analogy_types, analogy_eval_file)
     score_list.append(scores)
     summary += write_score_summary(scores, analogy_types, embeddings_file)
 
@@ -582,7 +608,8 @@ def test_distances(category, dictionary, W):
                 for out in out_category:
                     # d(fadd, br) > d(br, invoke)
                     # d(f*, br) > d(invoke, br)
-                    res.append(np.dot(W[out, :], W[in1, :]) < np.dot(W[in2, :], W[in1, :]))
+                    res.append(np.dot(W[out, :], W[in1, :])
+                               < np.dot(W[in2, :], W[in1, :]))
 
     return res, out_
 
@@ -618,7 +645,8 @@ def semantic_test(eval_folder, embeddings, embeddings_file, dictionary):
         os.makedirs(folder_semtests)
 
     # Print results to file
-    res_file = os.path.join(folder_semtests, 'res_' + embeddings_file[:-2].replace('/', '_') + '.txt')
+    res_file = os.path.join(folder_semtests, 'res_' +
+                            embeddings_file[:-2].replace('/', '_') + '.txt')
     with open(res_file, 'w') as f:
         f.write(out)
 
@@ -686,13 +714,19 @@ def plot_clustering(eval_folder, embeddings, embeddings_file, reverse_dictionary
         pickle.dump([targets, labels], open(flags_file, 'wb'))
 
     if FLAGS.tsne:
-        embedding = TSNE(metric=FLAGS.metric, verbose=FLAGS.verbose).fit_transform(embeddings)
-        np_file = os.path.join(folder_clusterplot, 'tsne_' + embeddings_file[:-2].replace('/', '_') + '.np')
-        html_file = os.path.join(folder_clusterplot, 'tsne_' + embeddings_file[:-2].replace('/', '_') + '.html')
+        embedding = TSNE(metric=FLAGS.metric,
+                         verbose=FLAGS.verbose).fit_transform(embeddings)
+        np_file = os.path.join(
+            folder_clusterplot, 'tsne_' + embeddings_file[:-2].replace('/', '_') + '.np')
+        html_file = os.path.join(
+            folder_clusterplot, 'tsne_' + embeddings_file[:-2].replace('/', '_') + '.html')
     else:
-        embedding = umap.UMAP(metric=FLAGS.metric, verbose=FLAGS.verbose).fit_transform(embeddings)
-        np_file = os.path.join(folder_clusterplot, 'umap_' + embeddings_file[:-2].replace('/', '_') + '.np')
-        html_file = os.path.join(folder_clusterplot, 'umap_' + embeddings_file[:-2].replace('/', '_') + '.html')
+        embedding = umap.UMAP(metric=FLAGS.metric,
+                              verbose=FLAGS.verbose).fit_transform(embeddings)
+        np_file = os.path.join(
+            folder_clusterplot, 'umap_' + embeddings_file[:-2].replace('/', '_') + '.np')
+        html_file = os.path.join(
+            folder_clusterplot, 'umap_' + embeddings_file[:-2].replace('/', '_') + '.html')
 
     # Save plots to file
     embedding.tofile(np_file)
@@ -700,11 +734,12 @@ def plot_clustering(eval_folder, embeddings, embeddings_file, reverse_dictionary
     print('Plotting')
 
     source = ColumnDataSource(dict(
-            x=[e[0] for e in embedding],
-            y=[e[1] for e in embedding],
-            label=labels))
+        x=[e[0] for e in embedding],
+        y=[e[1] for e in embedding],
+        label=labels))
 
-    cmap = CategoricalColorMapper(factors=targets, palette=Category20[len(targets)])
+    cmap = CategoricalColorMapper(
+        factors=targets, palette=Category20[len(targets)])
 
     p = figure(title="test umap")
     p.circle(x='x',
@@ -753,7 +788,8 @@ def evaluate_embeddings(data_folder, embeddings, embeddings_file):
 
     ####################################################################################################################
     # Analogies
-    analogies(eval_folder, embeddings, embeddings_file, dictionary, reverse_dictionary)
+    analogies(eval_folder, embeddings, embeddings_file,
+              dictionary, reverse_dictionary)
 
     ####################################################################################################################
     # Semantic tests
@@ -761,4 +797,5 @@ def evaluate_embeddings(data_folder, embeddings, embeddings_file):
 
     ####################################################################################################################
     # Clustering plot
-    plot_clustering(eval_folder, embeddings, embeddings_file, reverse_dictionary)
+    plot_clustering(eval_folder, embeddings,
+                    embeddings_file, reverse_dictionary)

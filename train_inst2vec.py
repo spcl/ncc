@@ -44,11 +44,13 @@ def main(argv):
 
         if FLAGS.data == "data" and len(os.listdir(data_folder)) <= 1:
             # Generate the data set
-            print('Folder', data_folder, 'is empty - preparing to download training data')
+            print('Folder', data_folder,
+                  'is empty - preparing to download training data')
             i2v_datagen.datagen(data_folder)
         else:
             # Assert the data folder's existence
-            assert os.path.exists(data_folder), "Folder " + data_folder + " does not exist"
+            assert os.path.exists(data_folder), "Folder " + \
+                data_folder + " does not exist"
 
         # Build XFGs from raw code
         data_folders = i2v_prep.construct_xfg(data_folder)
@@ -57,7 +59,8 @@ def main(argv):
         i2v_vocab.construct_vocabulary(data_folder, data_folders)
 
         # Train embeddings
-        embedding_matrix, embeddings_file = i2v_emb.train_embeddings(data_folder, data_folders)
+        embedding_matrix, embeddings_file = i2v_emb.train_embeddings(
+            data_folder, data_folders)
 
     else:
 
@@ -67,7 +70,8 @@ def main(argv):
         embeddings_file = FLAGS.embeddings_file
 
     # Evaluate embeddings (intrinsic evaluation)
-    i2v_eval.evaluate_embeddings(data_folder, embedding_matrix, embeddings_file)
+    i2v_eval.evaluate_embeddings(
+        data_folder, embedding_matrix, embeddings_file)
 
 
 if __name__ == '__main__':

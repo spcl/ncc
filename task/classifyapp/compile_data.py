@@ -32,7 +32,7 @@ import template_vars
 class CompilerArgumentGenerator(object):
     def __init__(self):
         self.compiler = template_vars.ValueListVar(
-            ['g++ -fplugin=dragonegg.so -S -fplugin-arg-dragonegg-emit-ir -std=c++11', 
+            ['g++ -S -std=c++11', 
              'clang++ -S -emit-llvm -std=c++11'])
         self.optimization = template_vars.ValueListVar(['-O0','-O1','-O2','-O3'])
         self.fastmath = template_vars.ValueListVar(['', '-ffast-math'])
